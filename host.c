@@ -55,13 +55,16 @@ host_add_container(CONTAINER *container)
 	CONTAINER_HOST *p;
 	int r;
 	
-	fprintf(stderr, "container: adding new container\n");
+	fprintf(stderr, "host: adding new container\n");
 	p = (CONTAINER_HOST *) calloc(1, sizeof(CONTAINER_HOST));
 	if(!p)
 	{	
 		return NULL;
 	}
 	p->container = container;
+	/* Supply some defaults */
+	p->minchildren = 0;
+	p->maxchildren = 128;
 	instance_list_init(&(p->instances), 16);
 	r = host_list_add(&hosts, p);
 	if(r)
@@ -70,8 +73,40 @@ host_add_container(CONTAINER *container)
 		free(p);
 		return NULL;
 	}
-	fprintf(stderr, "container: added\n");
+	fprintf(stderr, "host: added container\n");
 	return p;
+}
+
+int
+host_set_minchildren(CONTAINER_HOST *host, size_t minchildren)
+{
+	size_t c;
+	
+	/* XXX locking all over the place */
+	if(host->maxchildren && minchildren > host->maxchildren)
+	{
+		minchildren = host->maxchildren;
+	}
+	fprintf(stderr, "host: setting minimum number of instances to %lu\n", (unsigned long) minchildren);
+	if(minchildren < host->minchildren)
+	{
+		host->minchildren = minchildren;
+		return 0;
+	}
+	if(minchildren > host->minchildren)
+	{
+		if(minchildren > host->active)
+		{
+			c = minchildren - host->active;
+			fprintf(stderr, "host: will launch %lu additional instances\n", (unsigned long) c);
+			host->minchildren = minchildren;
+			for(; c; c--)
+			{
+				host_create_instance(host);
+			}
+		}
+	}
+	return 0;
 }
 
 /* Locate the most suitable instance to service a request, creating a new
@@ -84,6 +119,7 @@ host_locate_instance(CONTAINER_HOST *host)
 	CONTAINER_INSTANCE_HOST *p;
 	
 	instance_list_rdlock(&(host->instances));
+	fprintf(stderr, "host: container has %lu active instances\n", (unsigned long) host->active);
 	if(host->active)
 	{
 		/* Find the least-loaded child to service the request */
@@ -96,13 +132,13 @@ host_locate_instance(CONTAINER_HOST *host)
 				(host->instances.list[c]->state == IS_IDLE ||
 					host->instances.list[c]->state == IS_RUNNING))
 			{
-				if(host->instances.list[c]->requestcount < nreqs)
+				if(!p || host->instances.list[c]->requestcount < nreqs)
 				{
-					nreqs = host->instances.list[c]->requestcount < nreqs;
+					nreqs = host->instances.list[c]->requestcount;
 					p = host->instances.list[c];
 				}
 			}
-		}
+		}		
 		if(p && nreqs && host->active < host->maxchildren)
 		{
 			/* Create a new instance to service this request instead
@@ -112,6 +148,7 @@ host_locate_instance(CONTAINER_HOST *host)
 		}
 		if(p)
 		{
+			fprintf(stderr, "host: located instance with %lu pending requests\n", (unsigned long) nreqs);
 			/* XXX
 			p->api->addref(p);
 			*/
@@ -120,6 +157,7 @@ host_locate_instance(CONTAINER_HOST *host)
 		}
 	}
 	instance_list_unlock(&(host->instances));
+	fprintf(stderr, "host: no suitable instance found for request processing\n");
 	return host_create_instance(host);
 }
 

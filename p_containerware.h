@@ -130,6 +130,7 @@ CONTAINER_HOST *host_add_container(CONTAINER *container);
 CONTAINER_INSTANCE_HOST *host_locate_instance(CONTAINER_HOST *host);
 CONTAINER_INSTANCE_HOST *host_create_instance(CONTAINER_HOST *host);
 int host_queue_request(CONTAINER_INSTANCE_HOST *instance, CONTAINER_REQUEST *req, LISTENER *source);
+int host_set_minchildren(CONTAINER_HOST *host, size_t minchildren);
 
 /* Built-in endpoint servers */
 ENDPOINT_SERVER *dummy_endpoint_server(void);

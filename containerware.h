@@ -149,6 +149,9 @@ struct container_request_api_struct
 	void *reserved1;
 	unsigned long (*addref)(CONTAINER_REQUEST *me);
 	unsigned long (*release)(CONTAINER_REQUEST *me);
+	const char *(*protocol)(CONTAINER_REQUEST *me);
+	const char *(*method)(CONTAINER_REQUEST *me);
+	const char *(*request_uri_str)(CONTAINER_REQUEST *me);
 };
 
 

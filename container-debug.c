@@ -105,7 +105,6 @@ debug_process_(CONTAINER_INSTANCE *me)
 			return -1;
 		}
 		debug_process_request_(me, req);
-		req->api->release(req);
 	}
 	fprintf(stderr, "debug: terminating\n");
 	return 0;
@@ -114,8 +113,14 @@ debug_process_(CONTAINER_INSTANCE *me)
 static int
 debug_process_request_(CONTAINER_INSTANCE *me, CONTAINER_REQUEST *req)
 {
-	fprintf(stderr, "debug: processing a request\n");
+	(void) me;
 	
-	fprintf(stderr, "debug: done\n");
+	fprintf(stderr, "debug: --- processing request (%08lx) on thread %lu/%lu\n", (unsigned long) req, (unsigned long) getpid(), (unsigned long) pthread_self());
+	fprintf(stderr, "debug: protocol =    %s\n", req->api->protocol(req));
+	fprintf(stderr, "debug: method =      %s\n", req->api->method(req));
+	fprintf(stderr, "debug: Request-URI = %s\n", req->api->request_uri_str(req));
+	fprintf(stderr, "debug: sleeping to simulate processing delay...\n");
+	sleep(8);
+	fprintf(stderr, "debug: --- completed processing request (%08lx) on thread %lu/%lu\n", (unsigned long) req, (unsigned long) getpid(), (unsigned long) pthread_self());
 	return 0;
 }

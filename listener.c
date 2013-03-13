@@ -149,6 +149,7 @@ listener_thread_handler_(void *ptr)
 	me->state = LS_RUNNING;
 	for(;;)
 	{
+		fprintf(stderr, "listener: waiting for activity...\n");
 		r = me->endpoint->api->process(me->endpoint);
 		if(r == -1)
 		{
@@ -170,7 +171,6 @@ listener_thread_handler_(void *ptr)
 		fprintf(stderr, "listener: now have request\n");
 		route_request(req, me);
 		req->api->release(req);
-		break;
 	}
 	me->status = LS_ZOMBIE;
 	me->status = r;

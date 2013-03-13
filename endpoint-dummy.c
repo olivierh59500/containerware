@@ -6,8 +6,7 @@
 
 #include "p_containerware.h"
 
-/* This is a dummy endpoint: it generates a single request and then
- * does nothing else.
+/* This is a dummy endpoint: it generates a single request every few seconds.
  */
 
 static int dummy_server_endpoint_(ENDPOINT_SERVER *me, ENDPOINT **ep);
@@ -21,6 +20,9 @@ static int dummy_acquire_(ENDPOINT *me, CONTAINER_REQUEST **req);
 
 static unsigned long dummy_request_addref_(CONTAINER_REQUEST *me);
 static unsigned long dummy_request_release_(CONTAINER_REQUEST *me);
+static const char *dummy_request_protocol_(CONTAINER_REQUEST *me);
+static const char *dummy_request_method_(CONTAINER_REQUEST *me);
+static const char *dummy_request_uri_str_(CONTAINER_REQUEST *me);
 
 struct endpoint_server_struct
 {
@@ -64,7 +66,10 @@ static struct container_request_api_struct dummy_request_api_ =
 {
 	NULL,
 	dummy_request_addref_,
-	dummy_request_release_
+	dummy_request_release_,
+	dummy_request_protocol_,
+	dummy_request_method_,
+	dummy_request_uri_str_
 };
 
 ENDPOINT_SERVER *
@@ -126,13 +131,12 @@ dummy_fd_(ENDPOINT *me)
 int
 dummy_process_(ENDPOINT *me)
 {
-	if(!me->acquired)
-	{
-		return 1;
-	}
 	for(;;)
 	{
-		sleep(10);
+		sleep(5);
+		me->acquired = 0;
+		fprintf(stderr, "dummy: a new request is ready\n");
+		return 1;
 	}
 	return 0;
 }
@@ -154,6 +158,7 @@ dummy_acquire_(ENDPOINT *me, CONTAINER_REQUEST **req)
 	}
 	(*req)->refcount = 1;
 	(*req)->api = &dummy_request_api_;
+	fprintf(stderr, "dummy: returning new request %08lx\n", (unsigned long) (*req));
 	return 0;
 }
 
@@ -170,8 +175,27 @@ dummy_request_release_(CONTAINER_REQUEST *me)
 	me->refcount--;
 	if(!me->refcount)
 	{
+		fprintf(stderr, "dummy: freeing request\n");
 		free(me);
 		return 0;
 	}
 	return me->refcount;
+}
+
+static const char *
+dummy_request_protocol_(CONTAINER_REQUEST *me)
+{
+	return "http";
+}
+
+static const char *
+dummy_request_method_(CONTAINER_REQUEST *me)
+{
+	return "GET";
+}
+
+static const char *
+dummy_request_uri_str_(CONTAINER_REQUEST *me)
+{
+	return "/server-status";
 }

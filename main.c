@@ -17,6 +17,7 @@ main(int argc, char **argv)
 	listener_init();
 	host_init();
 	host = host_add("debug");
+	host_set_minchildren(host, 2);
 	listener_add("dummy", host);
 	
 	if(debug_console)
