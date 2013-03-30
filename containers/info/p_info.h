@@ -30,17 +30,17 @@ struct container_struct
 	CONTAINERWARE *cw;
 };
 
-struct container_instance_struct
+struct container_worker_struct
 {
-	CONTAINER_INSTANCE_COMMON;
-	CONTAINER_INSTANCE_INFO info;
+	CONTAINER_WORKER_COMMON;
+	CONTAINER_WORKER_INFO info;
 	CONTAINER *container;
-	CONTAINER_INSTANCE_HOST *host;
+	CONTAINER_WORKER_HOST *host;
 	pthread_mutex_t lock;
 	unsigned long refcount;
 };
 
 int containerware_module_init(CONTAINERWARE *cw);
-CONTAINER_INSTANCE *instance_create_(CONTAINER *container, CONTAINER_INSTANCE_HOST *host, const CONTAINER_INSTANCE_INFO *info);
+CONTAINER_WORKER *worker_create_(CONTAINER *container, CONTAINER_WORKER_HOST *host, const CONTAINER_WORKER_INFO *info);
 
 #endif /*!P_INFO_H_*/

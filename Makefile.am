@@ -10,9 +10,9 @@ noinst_LTLIBRARIES = libiniparser.la
 containerware_SOURCES = p_containerware.h ptrlist-impl.h \
 	main.c log.c config.c module.c server.c route.c \
 	listener.c listener-socket-thread.c listener-endpoint-thread.c \
-	container.c host.c instance.c instance-thread.c \
+	container.c host.c worker.c worker-thread.c \
 	container-list.c listener-list.c server-list.c \
-	instance-list.c host-list.c
+	worker-list.c host-list.c
 
 containerware_LDADD = libiniparser.la \
 	@LIBURI_LDFLAGS@ @LIBURI_LOCAL_LIBS@ @LIBURI_LIBS@ \

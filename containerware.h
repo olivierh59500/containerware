@@ -17,7 +17,7 @@ extern "C" {
 
 # ifdef CONTAINER_PLUGIN_INTERNAL
 #  define CONTAINER_STRUCT_DEFINED_    1
-#  define CONTAINER_INSTANCE_STRUCT_DEFINED_ 1
+#  define CONTAINER_WORKER_STRUCT_DEFINED_ 1
 # endif
 
 # ifdef ENDPOINT_PLUGIN_INTERNAL
@@ -36,7 +36,7 @@ typedef struct containerware_struct CONTAINERWARE;
 struct containerware_struct { CONTAINERWARE_COMMON };
 # endif
 
-/* CONTAINER: Something which creates instances to process requests */
+/* CONTAINER: Something which creates workers to process requests */
 typedef struct container_struct CONTAINER;
 
 # define CONTAINER_COMMON \
@@ -46,15 +46,15 @@ typedef struct container_struct CONTAINER;
 struct container_struct { CONTAINER_COMMON };
 # endif
 
-/* CONTAINER_INSTANCE: An instance of a container */
-typedef struct container_instance_struct CONTAINER_INSTANCE;
-typedef struct container_instance_info_struct CONTAINER_INSTANCE_INFO;
+/* CONTAINER_WORKER: An individual worker thread for a container */
+typedef struct container_worker_struct CONTAINER_WORKER;
+typedef struct container_worker_info_struct CONTAINER_WORKER_INFO;
 
-# define CONTAINER_INSTANCE_COMMON \
-	struct container_instance_api_struct *api;
+# define CONTAINER_WORKER_COMMON \
+	struct container_worker_api_struct *api;
 
-# ifndef CONTAINER_INSTANCE_STRUCT_DEFINED_
-struct container_instance_struct { CONTAINER_INSTANCE_COMMON };
+# ifndef CONTAINER_WORKER_STRUCT_DEFINED_
+struct container_worker_struct { CONTAINER_WORKER_COMMON };
 # endif
 
 /* ENDPOINT: A single "listener", such as as TCP/IP socket */
@@ -78,7 +78,7 @@ struct endpoint_server_struct { ENDPOINT_SERVER_COMMON };
 # endif
 
 /* CONTAINER_REQUEST: A request acquired from an endpoint to be processed
- * by an instance.
+ * by a worker.
  */
 typedef struct container_request_struct CONTAINER_REQUEST;
 
@@ -89,16 +89,16 @@ typedef struct container_request_struct CONTAINER_REQUEST;
 struct container_request_struct { CONTAINER_REQUEST_COMMON };
 # endif
 
-/* CONTAINER_INSTANCE_HOST: Obtains requests so that they may be processed by
- * instances; implemented by ContainerWare.
+/* CONTAINER_WORKER_HOST: Obtains requests so that they may be processed by
+ * workers; implemented by ContainerWare.
  */
-typedef struct container_instance_host_struct CONTAINER_INSTANCE_HOST;
+typedef struct container_worker_host_struct CONTAINER_WORKER_HOST;
 
-# define CONTAINER_INSTANCE_HOST_COMMON \
-	struct container_instance_host_api_struct *api;
+# define CONTAINER_WORKER_HOST_COMMON \
+	struct container_worker_host_api_struct *api;
 
-# ifndef CONTAINER_INSTANCE_HOST_STRUCT_DEFINED_
-struct container_instance_host_struct { CONTAINER_INSTANCE_HOST_COMMON };
+# ifndef CONTAINER_WORKER_HOST_STRUCT_DEFINED_
+struct container_worker_host_struct { CONTAINER_WORKER_HOST_COMMON };
 # endif
 
 /* API exported by ContainerWare */
@@ -111,8 +111,8 @@ struct containerware_api_struct
 	int (*register_container)(CONTAINERWARE *me, const char *name, CONTAINER *container);
 };
 
-/* Information passed to a container about an instance */
-struct container_instance_info_struct
+/* Information passed to a container about a worker */
+struct container_worker_info_struct
 {
 	/* Application name */
 	char app[64];
@@ -123,30 +123,30 @@ struct container_instance_info_struct
 	/* Process ID */
 	pid_t pid;
 	/* Thread ID */
-	uint32_t threadid;
+	uint32_t workerid;
 };
 
 /* A container engine, which allows creation of request-processing
- * instances; implemented by container plug-ins
+ * workers; implemented by container plug-ins
  */
 struct container_api_struct
 {
 	void *reserved1;
 	unsigned long (*addref)(CONTAINER *me);	
 	unsigned long (*release)(CONTAINER *me);
-	/* Create a new instance */
-	int (*instance)(CONTAINER *me, CONTAINER_INSTANCE_HOST *host, const CONTAINER_INSTANCE_INFO *info, CONTAINER_INSTANCE **out);
+	/* Create a new worker */
+	int (*worker)(CONTAINER *me, CONTAINER_WORKER_HOST *host, const CONTAINER_WORKER_INFO *info, CONTAINER_WORKER **out);
 };
 
-/* An instance which is responsible for processing requests; implemented
+/* A worker which is responsible for processing requests; implemented
  * by engine plug-ins.
  */
-struct container_instance_api_struct
+struct container_worker_api_struct
 {
 	void *reserved1;
-	unsigned long (*addref)(CONTAINER_INSTANCE *me);
-	unsigned long (*release)(CONTAINER_INSTANCE *me);
-	int (*process)(CONTAINER_INSTANCE *me);
+	unsigned long (*addref)(CONTAINER_WORKER *me);
+	unsigned long (*release)(CONTAINER_WORKER *me);
+	int (*process)(CONTAINER_WORKER *me);
 };
 
 /* Nature of an endpoint (e.g., socket [file descriptor], dedicated
@@ -210,15 +210,15 @@ struct container_request_api_struct
 
 
 /* A container host obtains requests so that they may be processed by
- * instances; implemented by ContainerWare
+ * workers; implemented by ContainerWare
  */
-struct container_instance_host_api_struct
+struct container_worker_host_api_struct
 {
 	void *reserved1;
 	void *reserved2;
 	void *reserved3;
 	/* Block waiting for the next request */
-	int (*request)(CONTAINER_INSTANCE_HOST *me, CONTAINER_REQUEST **req);
+	int (*request)(CONTAINER_WORKER_HOST *me, CONTAINER_REQUEST **req);
 };
 
 # if defined(__cplusplus)

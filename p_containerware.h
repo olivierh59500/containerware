@@ -21,7 +21,7 @@
 # include "iniparser.h"
 
 # define LISTENER_STRUCT_DEFINED_      1
-# define CONTAINER_INSTANCE_HOST_STRUCT_DEFINED_ 1
+# define CONTAINER_WORKER_HOST_STRUCT_DEFINED_ 1
 
 # include "containerware.h"
 
@@ -63,7 +63,7 @@ typedef struct container_host_struct CONTAINER_HOST;
 
 DECLARE_PTRLIST(listener_list, LISTENER);
 DECLARE_PTRLIST(host_list, CONTAINER_HOST);
-DECLARE_PTRLIST(instance_list, CONTAINER_INSTANCE_HOST);
+DECLARE_PTRLIST(worker_list, CONTAINER_WORKER_HOST);
 DECLARE_PTRLIST(server_list, struct server_list_entry_struct);
 DECLARE_PTRLIST(container_list, struct container_list_entry_struct);
 
@@ -109,34 +109,34 @@ struct container_host_struct
 	size_t maxchildren;
 	size_t active;
 	dictionary *config;
-	struct instance_list_struct instances;
+	struct worker_list_struct workers;
 };
 
 typedef enum
 {
-	IS_EMPTY,
-	IS_IDLE,
-	IS_RUNNING,
-	IS_ZOMBIE
-} CONTAINER_INSTANCE_STATE;
+	WS_EMPTY,
+	WS_IDLE,
+	WS_RUNNING,
+	WS_ZOMBIE
+} CONTAINER_WORKER_STATE;
 
-/* Internal structure encapsulating an individual instance */
-struct container_instance_host_struct
+/* Internal structure encapsulating an individual worker */
+struct container_worker_host_struct
 {
-	CONTAINER_INSTANCE_HOST_COMMON;
+	CONTAINER_WORKER_HOST_COMMON;
 	pthread_mutex_t mutex;
 	pthread_cond_t cond;
 	size_t refcount;
-	CONTAINER_INSTANCE *instance;
+	CONTAINER_WORKER *worker;
 	CONTAINER_HOST *container_host;
-	CONTAINER_INSTANCE_INFO info;
+	CONTAINER_WORKER_INFO info;
 	pthread_t thread;
 	pid_t child;
 	size_t requestcount;
 	size_t requestalloc;
 	CONTAINER_REQUEST **requests;
 	CONTAINER_REQUEST *current;
-	CONTAINER_INSTANCE_STATE state;
+	CONTAINER_WORKER_STATE state;
 	int status;
 };
 
@@ -181,9 +181,9 @@ int log_puts(const char *facility, int severity, const char *str);
 int log_vprintf(const char *facility, int severity, const char *fmt, va_list ap);
 int log_printf(const char *facility, int severity, const char *fmt, ...);
 
-int log_hputs(CONTAINER_INSTANCE_HOST *host, int severity, const char *str);
-int log_hvprintf(CONTAINER_INSTANCE_HOST *host, int severity, const char *fmt, va_list ap);
-int log_hprintf(CONTAINER_INSTANCE_HOST *host, int severity, const char *fmt, ...);
+int log_hputs(CONTAINER_WORKER_HOST *host, int severity, const char *str);
+int log_hvprintf(CONTAINER_WORKER_HOST *host, int severity, const char *fmt, va_list ap);
+int log_hprintf(CONTAINER_WORKER_HOST *host, int severity, const char *fmt, ...);
 
 /* Listeners  */
 int listener_init(void);
@@ -218,12 +218,12 @@ CONTAINER_HOST *host_add(dictionary *config);
 CONTAINER_HOST *host_add_container(CONTAINER *container, dictionary *config);
 int host_set_minchildren(CONTAINER_HOST *host, size_t minchildren);
 
-/* Instances */
-CONTAINER_INSTANCE_HOST *instance_create(CONTAINER_HOST *host);
-CONTAINER_INSTANCE_HOST *instance_locate(CONTAINER_HOST *host);
-int instance_queue_request(CONTAINER_INSTANCE_HOST *instance, CONTAINER_REQUEST *req, LISTENER *source);
+/* Worker */
+CONTAINER_WORKER_HOST *worker_create(CONTAINER_HOST *host);
+CONTAINER_WORKER_HOST *worker_locate(CONTAINER_HOST *host);
+int worker_queue_request(CONTAINER_WORKER_HOST *worker, CONTAINER_REQUEST *req, LISTENER *source);
 
-/* Instance threads */
-int instance_thread_create(CONTAINER_INSTANCE_HOST *host);
+/* Worker threads */
+int worker_thread_create(CONTAINER_WORKER_HOST *host);
 
 #endif /*!P_CONTAINERWARE_H_*/

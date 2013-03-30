@@ -1,7 +1,7 @@
 pkglib_LTLIBRARIES = info.la
 
 info_la_SOURCES = p_info.h \
-	container.c instance.c
+	container.c worker.c
 
 info_la_CPPFLAGS = @LIBURI_CPPFLAGS@
 

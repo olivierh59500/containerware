@@ -24,13 +24,13 @@ route_request(CONTAINER_REQUEST *req, LISTENER *source)
 int
 route_request_host(CONTAINER_REQUEST *req, LISTENER *source, CONTAINER_HOST *host)
 {
-	CONTAINER_INSTANCE_HOST *instance;
+	CONTAINER_WORKER_HOST *worker;
 	
-	instance = instance_locate(host);
-	if(!instance)
+	worker = worker_locate(host);
+	if(!worker)
 	{
-		LPRINTF(LOG_ERR, "failed to locate an instance to process this request");
+		LPRINTF(LOG_ERR, "failed to locate a worker to process this request");
 		return -1;
 	}
-	return instance_queue_request(instance, req, source);
+	return worker_queue_request(worker, req, source);
 }

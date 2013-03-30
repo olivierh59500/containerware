@@ -6,29 +6,29 @@
 
 extern char **environ;
 
-static unsigned long instance_addref_(CONTAINER_INSTANCE *me);
-static unsigned long instance_release_(CONTAINER_INSTANCE *me);
-static int instance_process_(CONTAINER_INSTANCE *me);
-static int instance_process_request_(CONTAINER_INSTANCE *me, CONTAINER_REQUEST *req);
+static unsigned long worker_addref_(CONTAINER_WORKER *me);
+static unsigned long worker_release_(CONTAINER_WORKER *me);
+static int worker_process_(CONTAINER_WORKER *me);
+static int worker_process_request_(CONTAINER_WORKER *me, CONTAINER_REQUEST *req);
 
 static int info_putstr_(CONTAINER_REQUEST *req, const char *header, const char *str);
 static int info_putulong_(CONTAINER_REQUEST *req, const char *header, unsigned long l);
 static int info_putvar_(CONTAINER_REQUEST *req, const char *header, const char *name);
 
-static struct container_instance_api_struct instance_api_ =
+static struct container_worker_api_struct worker_api_ =
 {
 	NULL,
-	instance_addref_,
-	instance_release_,
-	instance_process_
+	worker_addref_,
+	worker_release_,
+	worker_process_
 };
 
-CONTAINER_INSTANCE *
-instance_create_(CONTAINER *container, CONTAINER_INSTANCE_HOST *host, const CONTAINER_INSTANCE_INFO *info)
+CONTAINER_WORKER *
+worker_create_(CONTAINER *container, CONTAINER_WORKER_HOST *host, const CONTAINER_WORKER_INFO *info)
 {
-	CONTAINER_INSTANCE *p;
+	CONTAINER_WORKER *p;
 	
-	p = (CONTAINER_INSTANCE *) calloc(1, sizeof(CONTAINER_INSTANCE));
+	p = (CONTAINER_WORKER *) calloc(1, sizeof(CONTAINER_WORKER));
 	if(!p)
 	{
 		return NULL;
@@ -36,15 +36,15 @@ instance_create_(CONTAINER *container, CONTAINER_INSTANCE_HOST *host, const CONT
 	container->api->addref(container);
 	pthread_mutex_init(&(p->lock), NULL);
 	p->refcount = 1;
-	p->api = &instance_api_;
-	memcpy(&(p->info), info, sizeof(CONTAINER_INSTANCE_INFO));
+	p->api = &worker_api_;
+	memcpy(&(p->info), info, sizeof(CONTAINER_WORKER_INFO));
 	p->host = host;
 	p->container = container;
 	return p;
 }
 
 static unsigned long
-instance_addref_(CONTAINER_INSTANCE *me)
+worker_addref_(CONTAINER_WORKER *me)
 {
 	unsigned long r;
 	
@@ -56,7 +56,7 @@ instance_addref_(CONTAINER_INSTANCE *me)
 }
 
 static unsigned long
-instance_release_(CONTAINER_INSTANCE *me)
+worker_release_(CONTAINER_WORKER *me)
 {
 	unsigned long r;
 	
@@ -73,7 +73,7 @@ instance_release_(CONTAINER_INSTANCE *me)
 }
 
 static int
-instance_process_(CONTAINER_INSTANCE *me)
+worker_process_(CONTAINER_WORKER *me)
 {
 	CONTAINER_REQUEST *req;
 	
@@ -92,7 +92,7 @@ instance_process_(CONTAINER_INSTANCE *me)
 		{
 			break;
 		}
-		instance_process_request_(me, req);
+		worker_process_request_(me, req);
 	}
 /*	LPRINTF(LOG_INFO, "thread terminating"); */
 	fprintf(stderr, "info: thread terminating\n");
@@ -100,7 +100,7 @@ instance_process_(CONTAINER_INSTANCE *me)
 }
 	
 static int
-instance_process_request_(CONTAINER_INSTANCE *me, CONTAINER_REQUEST *req)
+worker_process_request_(CONTAINER_WORKER *me, CONTAINER_REQUEST *req)
 {
 	size_t c;
 	const char *t;
@@ -282,7 +282,7 @@ instance_process_request_(CONTAINER_INSTANCE *me, CONTAINER_REQUEST *req)
 	info_putstr_(req, "Instance", me->info.instance);
 	info_putstr_(req, "Cluster", me->info.cluster);
 	info_putulong_(req, "Process ID", me->info.pid);
-	info_putulong_(req, "Thread ID", me->info.threadid);
+	info_putulong_(req, "Worker ID", me->info.workerid);
 	req->api->puts(req, "</tbody>\n");
 	req->api->puts(req, "</table>\n");	
 	req->api->puts(req, "</section>\n");

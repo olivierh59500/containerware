@@ -7,14 +7,14 @@
 static CONTAINER *container_create_(CONTAINERWARE *cw);
 static unsigned long container_addref_(CONTAINER *me);
 static unsigned long container_release_(CONTAINER *me);
-static int container_instance_(CONTAINER *me, CONTAINER_INSTANCE_HOST *host, const CONTAINER_INSTANCE_INFO *info, CONTAINER_INSTANCE **out);
+static int container_worker_(CONTAINER *me, CONTAINER_WORKER_HOST *host, const CONTAINER_WORKER_INFO *info, CONTAINER_WORKER **out);
 
 static struct container_api_struct container_api_ =
 {
 	NULL,
 	container_addref_,
 	container_release_,
-	container_instance_
+	container_worker_
 };
 
 int
@@ -82,13 +82,13 @@ container_release_(CONTAINER *me)
 }
 
 static int
-container_instance_(CONTAINER *me, CONTAINER_INSTANCE_HOST *host, const CONTAINER_INSTANCE_INFO *info, CONTAINER_INSTANCE **out)
+container_worker_(CONTAINER *me, CONTAINER_WORKER_HOST *host, const CONTAINER_WORKER_INFO *info, CONTAINER_WORKER **out)
 {
-	CONTAINER_INSTANCE *p;
+	CONTAINER_WORKER *p;
 	
 	(void) me;
 	
-	*out = instance_create_(me, host, info);
+	*out = worker_create_(me, host, info);
 	if(!*out)
 	{
 		return -1;

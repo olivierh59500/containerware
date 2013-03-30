@@ -2,39 +2,39 @@
 # include "config.h"
 #endif
 
-#define LOG_FACILITY                   "instance"
+#define LOG_FACILITY                   "worker"
 
 #include "p_containerware.h"
 
-static int instance_populate_info_(CONTAINER_HOST *host, CONTAINER_INSTANCE_INFO *info);
-static int instance_request_(CONTAINER_INSTANCE_HOST *me, CONTAINER_REQUEST **req);
-static int instance_log_request_(CONTAINER_INSTANCE_HOST *me, CONTAINER_REQUEST *req);
+static int worker_populate_info_(CONTAINER_HOST *host, CONTAINER_WORKER_INFO *info);
+static int worker_request_(CONTAINER_WORKER_HOST *me, CONTAINER_REQUEST **req);
+static int worker_log_request_(CONTAINER_WORKER_HOST *me, CONTAINER_REQUEST *req);
 
-static struct container_instance_host_api_struct instance_api_ =
+static struct container_worker_host_api_struct worker_api_ =
 {
 	NULL,
 	NULL,
 	NULL,
-	instance_request_
+	worker_request_
 };
 
-static uint32_t host_next_threadid = 100;
+static uint32_t worker_next_id = 100;
 
-/* Create a new instance and add it to a container's list of active
- * instances.
+/* Create a new worker and add it to a container's list of active
+ * workers.
  *
  * Threading: thread-safe
  */
-CONTAINER_INSTANCE_HOST *
-instance_create(CONTAINER_HOST *host)
+CONTAINER_WORKER_HOST *
+worker_create(CONTAINER_HOST *host)
 {
-	CONTAINER_INSTANCE_HOST *p;
-	CONTAINER_INSTANCE_INFO info;
+	CONTAINER_WORKER_HOST *p;
+	CONTAINER_WORKER_INFO info;
 	int r;
 	
-	instance_populate_info_(host, &info);
-	DPRINTF("creating new instance %s.%s/%s@%lu/%lu", info.app, info.instance, info.cluster, (unsigned long) info.pid, (unsigned long) info.threadid);
-	p = (CONTAINER_INSTANCE_HOST *) calloc(1, sizeof(CONTAINER_INSTANCE_HOST));
+	worker_populate_info_(host, &info);
+	DPRINTF("creating new worker %s.%s/%s@%lu/%lu", info.app, info.instance, info.cluster, (unsigned long) info.pid, (unsigned long) info.workerid);
+	p = (CONTAINER_WORKER_HOST *) calloc(1, sizeof(CONTAINER_WORKER_HOST));
 	if(!p)
 	{
 		return NULL;
@@ -48,22 +48,22 @@ instance_create(CONTAINER_HOST *host)
 	}
 	pthread_mutex_init(&(p->mutex), NULL);
 	pthread_mutex_lock(&(p->mutex));
-	p->api = &instance_api_;
+	p->api = &worker_api_;
 	p->container_host = host;
-	p->state = IS_EMPTY;
+	p->state = WS_EMPTY;
 	memcpy(&p->info, &info, sizeof(info));
-	DPRINTF("obtaining instance from container");
-	r = host->container->api->instance(host->container, p, &info, &(p->instance));
+	DPRINTF("obtaining worker from container");
+	r = host->container->api->worker(host->container, p, &info, &(p->worker));
 	if(r)
 	{
-		LPRINTF(LOG_CRIT, "failed to obtain new instance from container: %s", strerror(errno));
-		p->instance = NULL;
+		LPRINTF(LOG_CRIT, "failed to obtain new worker from container: %s", strerror(errno));
+		p->worker = NULL;
 	}
-	else if(!p->instance)
+	else if(!p->worker)
 	{
-		LPRINTF(LOG_CRIT, "failed to obtain new instance from container (no error reported)");
+		LPRINTF(LOG_CRIT, "failed to obtain new worker from container (no error reported)");
 	}
-	if(!p->instance)
+	if(!p->worker)
 	{
 		pthread_mutex_unlock(&(p->mutex));
 		pthread_mutex_destroy(&(p->mutex));
@@ -71,11 +71,11 @@ instance_create(CONTAINER_HOST *host)
 		free(p);	
 		return NULL;
 	}
-	instance_list_wrlock(&(host->instances));
-	r = instance_list_add_unlocked(&(host->instances), p);
+	worker_list_wrlock(&(host->workers));
+	r = worker_list_add_unlocked(&(host->workers), p);
 	if(r)
 	{
-		instance_list_unlock(&(host->instances));
+		worker_list_unlock(&(host->workers));
 		pthread_mutex_unlock(&(p->mutex));
 		pthread_mutex_destroy(&(p->mutex));
 		free(p->requests);
@@ -84,73 +84,73 @@ instance_create(CONTAINER_HOST *host)
 	}
 	host->active++;
 	pthread_cond_init(&(p->cond), NULL);
-	instance_list_unlock(&(host->instances));
-	instance_thread_create(p);
-	DPRINTF("new instance %s.%s/%s@%lu/%lu created on thread 0x%08x", info.app, info.instance, info.cluster, (unsigned long) info.pid, (unsigned long) info.threadid, (unsigned long) p->thread);
+	worker_list_unlock(&(host->workers));
+	worker_thread_create(p);
+	DPRINTF("new worker %s.%s/%s@%lu/%lu created on thread 0x%08x", info.app, info.instance, info.cluster, (unsigned long) info.pid, (unsigned long) info.workerid, (unsigned long) p->thread);
 	pthread_mutex_unlock(&(p->mutex));
 	return p;
 }
 
-/* Locate the most suitable instance to service a request, creating a new
- * instance if required.
+/* Locate the most suitable worker to service a request, creating a new
+ * worker if required.
  *
  * Threading: thread-safe
  */
-CONTAINER_INSTANCE_HOST *
-instance_locate(CONTAINER_HOST *host)
+CONTAINER_WORKER_HOST *
+worker_locate(CONTAINER_HOST *host)
 {
 	size_t c, nreqs;
-	CONTAINER_INSTANCE_HOST *p;
+	CONTAINER_WORKER_HOST *p;
 	
-	instance_list_rdlock(&(host->instances));
-	DPRINTF("container has %lu active instances", (unsigned long) host->active);
+	worker_list_rdlock(&(host->workers));
+	DPRINTF("container has %lu active workers", (unsigned long) host->active);
 	if(host->active)
 	{
 		/* Find the least-loaded child to service the request */
 		/* lock */
 		nreqs = 0;
 		p = NULL;
-		for(c = 0; c < host->instances.allocated; c++)
+		for(c = 0; c < host->workers.allocated; c++)
 		{
-			if(host->instances.list[c] &&
-				(host->instances.list[c]->state == IS_IDLE ||
-					host->instances.list[c]->state == IS_RUNNING))
+			if(host->workers.list[c] &&
+				(host->workers.list[c]->state == WS_IDLE ||
+					host->workers.list[c]->state == WS_RUNNING))
 			{
-				if(!p || host->instances.list[c]->requestcount < nreqs)
+				if(!p || host->workers.list[c]->requestcount < nreqs)
 				{
-					nreqs = host->instances.list[c]->requestcount;
-					p = host->instances.list[c];
+					nreqs = host->workers.list[c]->requestcount;
+					p = host->workers.list[c];
 				}
 			}
 		}		
 		if(p && nreqs && host->active < host->maxchildren)
 		{
-			/* Create a new instance to service this request instead
+			/* Create a new worker to service this request instead
 			 * of queueing
 			 */
 			p = NULL;
 		}
 		if(p)
 		{
-			DPRINTF("located instance with %lu pending requests", (unsigned long) nreqs);
+			DPRINTF("located worker with %lu pending requests", (unsigned long) nreqs);
 			/* XXX
 			p->api->addref(p);
 			*/
-			instance_list_unlock(&(host->instances));
+			worker_list_unlock(&(host->workers));
 			return p;
 		}
 	}
-	instance_list_unlock(&(host->instances));
-	DPRINTF("no suitable instance found for request processing");
-	return instance_create(host);
+	worker_list_unlock(&(host->workers));
+	DPRINTF("no suitable worker found for request processing");
+	return worker_create(host);
 }
 
-/* Forward a request to an instance
+/* Forward a request to an worker
  *
  * Threading: thread-safe
  */
 int
-instance_queue_request(CONTAINER_INSTANCE_HOST *host, CONTAINER_REQUEST *req, LISTENER *source)
+worker_queue_request(CONTAINER_WORKER_HOST *host, CONTAINER_REQUEST *req, LISTENER *source)
 {
 	(void) source;
 	
@@ -171,30 +171,30 @@ instance_queue_request(CONTAINER_INSTANCE_HOST *host, CONTAINER_REQUEST *req, LI
 	return 0;
 }
 
-/* Populate an instance information structure
+/* Populate an worker information structure
  *
  * Threading: the host's lock must be held
  */
 static int
-instance_populate_info_(CONTAINER_HOST *host, CONTAINER_INSTANCE_INFO *info)
+worker_populate_info_(CONTAINER_HOST *host, CONTAINER_WORKER_INFO *info)
 {
-	memset(info, 0, sizeof(CONTAINER_INSTANCE_INFO));
+	memset(info, 0, sizeof(CONTAINER_WORKER_INFO));
 	strncpy(info->app, iniparser_getstring(host->config, "name", "default"), sizeof(info->app) - 1);
 	strncpy(info->instance, iniparser_getstring(host->config, "instance", "localhost"), sizeof(info->instance) - 1);
 	strncpy(info->cluster, iniparser_getstring(host->config, "cluster", "private"), sizeof(info->cluster) - 1);
 	info->pid = getpid();
-	info->threadid = host_next_threadid;
-	host_next_threadid++;
+	info->workerid = worker_next_id;
+	worker_next_id++;
 	return 0;
 }
 
 
 /* Log a LOG_ACCESS message for the request
  *
- * Threading: the instance host's lock must be held
+ * Threading: the worker host's lock must be held
  */
 static int
-instance_log_request_(CONTAINER_INSTANCE_HOST *me, CONTAINER_REQUEST *req)
+worker_log_request_(CONTAINER_WORKER_HOST *me, CONTAINER_REQUEST *req)
 {
 	const char *host, *ident, *user, *method, *path, *protocol;
 	int status;
@@ -246,19 +246,19 @@ instance_log_request_(CONTAINER_INSTANCE_HOST *me, CONTAINER_REQUEST *req)
 	return 0;
 }
 
-/* Wait for a request to be routed to an instance
+/* Wait for a request to be routed to an worker
  *
- * Threading: thread-safe; always invoked on an instance thread
+ * Threading: thread-safe; always invoked on a worker thread
  */
 static int
-instance_request_(CONTAINER_INSTANCE_HOST *me, CONTAINER_REQUEST **req)
+worker_request_(CONTAINER_WORKER_HOST *me, CONTAINER_REQUEST **req)
 {
 	
 	*req = NULL;
 	pthread_mutex_lock(&(me->mutex));
-	if(me->state == IS_RUNNING && me->current)
+	if(me->state == WS_RUNNING && me->current)
 	{
-		instance_log_request_(me, me->current);
+		worker_log_request_(me, me->current);
 		DHPRINTF(me, "request processing complete");
 		if(me->requestcount > 1)
 		{
@@ -269,19 +269,19 @@ instance_request_(CONTAINER_INSTANCE_HOST *me, CONTAINER_REQUEST **req)
 		me->current = NULL;
 		DHPRINTF(me, "request count is now %d", (int) me->requestcount);
 	}
-	if(me->state == IS_ZOMBIE)
+	if(me->state == WS_ZOMBIE)
 	{
 		DHPRINTF(me, "this thread has already been terminated");
 		pthread_mutex_unlock(&(me->mutex));
 		errno = EPERM;
 		return -1;		
 	}
-	me->state = IS_IDLE;
+	me->state = WS_IDLE;
 	if(me->requestcount)
 	{
 		DHPRINTF(me, "returning pending request");
 		*req = me->current = me->requests[0];
-		me->state = IS_RUNNING;
+		me->state = WS_RUNNING;
 		pthread_mutex_unlock(&(me->mutex));
 		return 0;
 	}
@@ -290,13 +290,13 @@ instance_request_(CONTAINER_INSTANCE_HOST *me, CONTAINER_REQUEST **req)
 	if(!me->requestcount)
 	{
 		DHPRINTF(me, "this thread will terminate");
-		me->state = IS_ZOMBIE;
+		me->state = WS_ZOMBIE;
 		pthread_mutex_unlock(&(me->mutex));
 		return 0;
 	}
 	DHPRINTF(me, "returning new request");
 	*req = me->current = me->requests[0];
-	me->state = IS_RUNNING;
+	me->state = WS_RUNNING;
 	pthread_mutex_unlock(&(me->mutex));
 	return 0;
 }

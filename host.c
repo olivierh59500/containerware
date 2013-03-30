@@ -78,11 +78,11 @@ host_add_container(CONTAINER *container, dictionary *config)
 	p->minchildren = 0;
 	p->maxchildren = 128;
 	p->config = config_copydict(config);
-	instance_list_init(&(p->instances), 16);
+	worker_list_init(&(p->workers), 16);
 	r = host_list_add(&hosts, p);
 	if(r == -1)
 	{
-		/* instance_list_destroy(&(p->instances)); */
+		/* worker_list_destroy(&(p->workers)); */
 		container->api->release(container);
 		pthread_mutex_unlock(&(p->lock));		
 		pthread_mutex_destroy(&(p->lock));
@@ -91,8 +91,8 @@ host_add_container(CONTAINER *container, dictionary *config)
 	}
 	pthread_mutex_unlock(&(p->lock));		
 	/* Configure the container */
-	host_set_minchildren(p, iniparser_getint(p->config, "mininstances", p->minchildren));
-/*	host_set_maxchildren(p, iniparser_getint(p->config, "maxinstances", p->minchildren)); */
+	host_set_minworkers(p, iniparser_getint(p->config, "minworkers", p->minchildren));
+/*	host_set_maxworkers(p, iniparser_getint(p->config, "maxworkers", p->minchildren)); */
 	DPRINTF("new container has been added");
 	return p;
 }
@@ -103,7 +103,7 @@ host_add_container(CONTAINER *container, dictionary *config)
  * Threading: XXX
  */
 int
-host_set_minchildren(CONTAINER_HOST *host, size_t minchildren)
+host_set_minworkers(CONTAINER_HOST *host, size_t minchildren)
 {
 	size_t c;
 	
@@ -112,7 +112,7 @@ host_set_minchildren(CONTAINER_HOST *host, size_t minchildren)
 	{
 		minchildren = host->maxchildren;
 	}
-	DPRINTF("setting minimum number of instances to %lu", (unsigned long) minchildren);
+	DPRINTF("setting minimum number of workers to %lu", (unsigned long) minchildren);
 	if(minchildren < host->minchildren)
 	{
 		host->minchildren = minchildren;
@@ -123,11 +123,11 @@ host_set_minchildren(CONTAINER_HOST *host, size_t minchildren)
 		if(minchildren > host->active)
 		{
 			c = minchildren - host->active;
-			DPRINTF("will launch %lu additional instances", (unsigned long) c);
+			DPRINTF("will launch %lu additional workers", (unsigned long) c);
 			host->minchildren = minchildren;
 			for(; c; c--)
 			{
-				instance_create(host);
+				worker_create(host);
 			}
 		}
 	}

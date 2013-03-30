@@ -26,7 +26,7 @@
 struct containerware_struct
 {
 	CONTAINERWARE_COMMON;
-	pthread_mutex_t *lock;
+	pthread_mutex_t lock;
 	unsigned long refcount;
 	void *dl;
 	char *name;

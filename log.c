@@ -8,9 +8,9 @@ static int log_level = LOG_DEBUG;
 static pthread_mutex_t log_lock;
 static const char *short_program_name = "cw";
 
-static int log_prefix_(FILE *fout, CONTAINER_INSTANCE_HOST *host, int severity);
-static int log_vxprintf_(const char *facility, CONTAINER_INSTANCE_HOST *host, int severity, const char *fmt, va_list ap);
-static int log_xprintf_(const char *facility, CONTAINER_INSTANCE_HOST *host, int severity, const char *fmt, ...);
+static int log_prefix_(FILE *fout, CONTAINER_WORKER_HOST *host, int severity);
+static int log_vxprintf_(const char *facility, CONTAINER_WORKER_HOST *host, int severity, const char *fmt, va_list ap);
+static int log_xprintf_(const char *facility, CONTAINER_WORKER_HOST *host, int severity, const char *fmt, ...);
 
 static const char *log_levels[] = {
 	"emerg",
@@ -53,7 +53,7 @@ log_init(int argc, char **argv)
  * Threading: must only be called by the thread which holds log_lock
  */
 static int
-log_prefix_(FILE *fout, CONTAINER_INSTANCE_HOST *host, int severity)
+log_prefix_(FILE *fout, CONTAINER_WORKER_HOST *host, int severity)
 {
 	time_t t;
 	struct tm tm;
@@ -75,7 +75,7 @@ log_prefix_(FILE *fout, CONTAINER_INSTANCE_HOST *host, int severity)
 	h = config_get("global:instance", "localhost");
 	if(host)
 	{
-		fprintf(fout, "%s %s %s[%lu/%lu] [%s] ", tbuf, host->info.instance, host->info.app, (unsigned long) host->info.pid, (unsigned long) host->info.threadid, s);
+		fprintf(fout, "%s %s %s[%lu/%lu] [%s] ", tbuf, host->info.instance, host->info.app, (unsigned long) host->info.pid, (unsigned long) host->info.workerid, s);
 	}
 	else
 	{
@@ -85,7 +85,7 @@ log_prefix_(FILE *fout, CONTAINER_INSTANCE_HOST *host, int severity)
 }
 
 static int
-log_vxprintf_(const char *facility, CONTAINER_INSTANCE_HOST *host, int severity, const char *fmt, va_list ap)
+log_vxprintf_(const char *facility, CONTAINER_WORKER_HOST *host, int severity, const char *fmt, va_list ap)
 {
 	if(severity <= log_level)
 	{
@@ -104,7 +104,7 @@ log_vxprintf_(const char *facility, CONTAINER_INSTANCE_HOST *host, int severity,
 }
 
 static int
-log_xprintf_(const char *facility, CONTAINER_INSTANCE_HOST *host, int severity, const char *fmt, ...)
+log_xprintf_(const char *facility, CONTAINER_WORKER_HOST *host, int severity, const char *fmt, ...)
 {
 	va_list ap;
 	
@@ -134,19 +134,19 @@ log_printf(const char *facility, int severity, const char *fmt, ...)
 }
 
 int
-log_hputs(CONTAINER_INSTANCE_HOST *host, int severity, const char *str)
+log_hputs(CONTAINER_WORKER_HOST *host, int severity, const char *str)
 {
 	return log_xprintf_(NULL, host, severity, str);
 }
 
 int
-log_hvprintf(CONTAINER_INSTANCE_HOST *host, int severity, const char *fmt, va_list ap)
+log_hvprintf(CONTAINER_WORKER_HOST *host, int severity, const char *fmt, va_list ap)
 {
 	return log_vxprintf_(NULL, host, severity, fmt, ap);
 }
 
 int
-log_hprintf(CONTAINER_INSTANCE_HOST *host, int severity, const char *fmt, ...)
+log_hprintf(CONTAINER_WORKER_HOST *host, int severity, const char *fmt, ...)
 {
 	va_list ap;
 	
