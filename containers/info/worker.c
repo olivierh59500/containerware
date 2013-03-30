@@ -40,6 +40,8 @@ worker_create_(CONTAINER *container, CONTAINER_WORKER_HOST *host, const CONTAINE
 	memcpy(&(p->info), info, sizeof(CONTAINER_WORKER_INFO));
 	p->host = host;
 	p->container = container;
+	container->cw->api->addref(container->cw);
+	p->cw = container->cw;
 	return p;
 }
 
@@ -66,6 +68,7 @@ worker_release_(CONTAINER_WORKER *me)
 	pthread_mutex_unlock(&(me->lock));
 	if(!r)
 	{
+		me->cw->api->release(me->cw);
 		me->container->api->release(me->container);
 		free(me);
 	}
@@ -77,15 +80,13 @@ worker_process_(CONTAINER_WORKER *me)
 {
 	CONTAINER_REQUEST *req;
 	
-	/* DPRINTF("thread started"); */
-	fprintf(stderr, "info: thread started\n");
+	WDPRINTF(me->host, "thread started");
 	for(;;)
 	{
 		req = NULL;
 		if(me->host->api->request(me->host, &req) == -1)
 		{
-/*			LPRINTF(LOG_CRIT, "container::request() failed: %s", strerror(errno)); */
-			fprintf(stderr, "info: container::request() failed: %s\n", strerror(errno));
+			WLPRINTF(me->host, CWLOG_CRIT, "container::request() failed: %s", strerror(errno));
 			return -1;
 		}
 		if(!req)
@@ -94,8 +95,7 @@ worker_process_(CONTAINER_WORKER *me)
 		}
 		worker_process_request_(me, req);
 	}
-/*	LPRINTF(LOG_INFO, "thread terminating"); */
-	fprintf(stderr, "info: thread terminating\n");
+	WLPRINTF(me->host, CWLOG_INFO, "thread terminating");
 	return 0;
 }
 	

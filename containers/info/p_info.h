@@ -38,6 +38,7 @@ struct container_worker_struct
 	CONTAINER_WORKER_HOST *host;
 	pthread_mutex_t lock;
 	unsigned long refcount;
+	CONTAINERWARE *cw;
 };
 
 int containerware_module_init(CONTAINERWARE *cw);

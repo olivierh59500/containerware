@@ -9,13 +9,19 @@
 static int worker_populate_info_(CONTAINER_HOST *host, CONTAINER_WORKER_INFO *info);
 static int worker_request_(CONTAINER_WORKER_HOST *me, CONTAINER_REQUEST **req);
 static int worker_log_request_(CONTAINER_WORKER_HOST *me, CONTAINER_REQUEST *req);
+static int worker_lputs_(CONTAINER_WORKER_HOST *me, int severity, const char *str);
+static int worker_lvprintf_(CONTAINER_WORKER_HOST *me, int severity, const char *fmt, va_list ap);
+static int worker_lprintf_(CONTAINER_WORKER_HOST *me, int severity, const char *fmt, ...);
 
 static struct container_worker_host_api_struct worker_api_ =
 {
 	NULL,
 	NULL,
 	NULL,
-	worker_request_
+	worker_request_,
+	worker_lputs_,
+	worker_lvprintf_,
+	worker_lprintf_
 };
 
 static struct worker_list_struct workers;
@@ -309,4 +315,25 @@ worker_request_(CONTAINER_WORKER_HOST *me, CONTAINER_REQUEST **req)
 	me->state = WS_RUNNING;
 	pthread_mutex_unlock(&(me->mutex));
 	return 0;
+}
+
+static int
+worker_lputs_(CONTAINER_WORKER_HOST *me, int severity, const char *str)
+{
+	return log_hputs(me, severity, str);
+}
+
+static int
+worker_lvprintf_(CONTAINER_WORKER_HOST *me, int severity, const char *fmt, va_list ap)
+{
+	return log_hvprintf(me, severity, fmt, ap);
+}
+
+static int
+worker_lprintf_(CONTAINER_WORKER_HOST *me, int severity, const char *fmt, ...)
+{
+	va_list ap;
+	
+	va_start(ap, fmt);
+	return log_hvprintf(me, severity, fmt, ap);
 }

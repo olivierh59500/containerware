@@ -238,7 +238,14 @@ struct container_worker_host_api_struct
 	void *reserved3;
 	/* Block waiting for the next request */
 	int (*request)(CONTAINER_WORKER_HOST *me, CONTAINER_REQUEST **req);
+	int (*lputs)(CONTAINER_WORKER_HOST *me, int severity, const char *str);
+	int (*lvprintf)(CONTAINER_WORKER_HOST *me, int severity, const char *fmt, va_list ap);
+	int (*lprintf)(CONTAINER_WORKER_HOST *me, int severity, const char *fmt, ...);
 };
+
+/* Logging macros */
+# define WDPRINTF(host, ...) (host)->api->lprintf(host, CWLOG_DEBUG, __VA_ARGS__)
+# define WLPRINTF(host, severity, ...) (host)->api->lprintf(host, severity, __VA_ARGS__)
 
 # if defined(__cplusplus)
 }
