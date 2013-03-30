@@ -90,13 +90,23 @@ static CONTAINERWARE *
 module_api_create_(void *dl, const char *name)
 {
 	CONTAINERWARE *p;
+	const char *t;
 	
 	p = (CONTAINERWARE *) calloc(1, sizeof(CONTAINERWARE));
 	if(!p)
 	{
 		return NULL;
 	}
-	p->name = strdup(name);
+	t = strrchr(name, '/');
+	if(t)
+	{
+		t++;
+	}
+	else
+	{
+		t = name;
+	}
+	p->name = strdup(t);
 	if(!p->name)
 	{
 		free(p);
