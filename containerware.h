@@ -126,6 +126,10 @@ struct containerware_api_struct
 	int (*lprintf)(CONTAINERWARE *me, int severity, const char *fmt, ...);
 };
 
+/* Logging macros */
+# define DPRINTF(cw, ...) (cw)->api->lprintf(cw, CWLOG_DEBUG, __VA_ARGS__)
+# define LPRINTF(cw, severity, ...) (cw)->api->lprintf(cw, severity, __VA_ARGS__)
+
 /* Information passed to a container about a worker */
 struct container_worker_info_struct
 {

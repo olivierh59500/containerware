@@ -157,11 +157,16 @@ int module_load(const char *path);
 
 /* Logging */
 
+# undef DFPRINTF
 # define DFPRINTF(fac, ...) log_printf(fac, CWLOG_DEBUG, __VA_ARGS__)
+# undef DHPRINTF
 # define DHPRINTF(host, ...) log_hprintf(host, CWLOG_DEBUG, __VA_ARGS__)
+# undef HLPRINTF
 # define HLPRINTF(host, severity, ...) log_hprintf(host, severity, __VA_ARGS__)
 # ifdef LOG_FACILITY
+#  undef DPRINTF
 #  define DPRINTF(...) log_printf(LOG_FACILITY, CWLOG_DEBUG, __VA_ARGS__)
+#  undef LPRINTF
 #  define LPRINTF(severity, ...) log_printf(LOG_FACILITY, severity, __VA_ARGS__)
 # endif
 
