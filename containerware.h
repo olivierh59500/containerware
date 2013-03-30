@@ -1,6 +1,20 @@
 #ifndef CONTAINERWARE_H_
 # define CONTAINERWARE_H_              1
 
+# include <inttypes.h>
+# include <sys/types.h>
+# include <sys/time.h>
+
+# include "liburi.h"
+
+# if (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L) && !defined(restrict)
+#  define restrict
+# endif
+
+# if defined(__cplusplus)
+extern "C" {
+# endif
+
 # ifdef CONTAINER_PLUGIN_INTERNAL
 #  define CONTAINER_STRUCT_DEFINED_    1
 #  define CONTAINER_INSTANCE_STRUCT_DEFINED_ 1
@@ -10,6 +24,16 @@
 #  define ENDPOINT_SERVER_STRUCT_DEFINED_ 1
 #  define ENDPOINT_STRUCT_DEFINED_     1
 #  define CONTAINER_REQUEST_STRUCT_DEFINED_ 1
+# endif
+	
+/* CONTAINERWARE: API exported by ContainerWare itself */
+typedef struct containerware_struct CONTAINERWARE;
+
+# define CONTAINERWARE_COMMON \
+	struct containerware_api_struct *api;
+
+# ifndef CONTAINERWARE_STRUCT_DEFINED_
+struct containerware_struct { CONTAINERWARE_COMMON };
 # endif
 
 /* CONTAINER: Something which creates instances to process requests */
@@ -77,13 +101,29 @@ typedef struct container_instance_host_struct CONTAINER_INSTANCE_HOST;
 struct container_instance_host_struct { CONTAINER_INSTANCE_HOST_COMMON };
 # endif
 
+/* API exported by ContainerWare */
+struct containerware_api_struct
+{
+	void *reserved;
+	unsigned long (*addref)(CONTAINERWARE *me);
+	unsigned long (*release)(CONTAINERWARE *me);
+	int (*register_endpoint)(CONTAINERWARE *me, const char *scheme, ENDPOINT_SERVER *server);
+	int (*register_container)(CONTAINERWARE *me, const char *name, CONTAINER *container);
+};
+
 /* Information passed to a container about an instance */
 struct container_instance_info_struct
 {
+	/* Application name */
+	char app[64];
 	/* Instance name */
-	char name[64];
+	char instance[64];
 	/* Cluster or grouping name */
 	char cluster[64];
+	/* Process ID */
+	pid_t pid;
+	/* Thread ID */
+	uint32_t threadid;
 };
 
 /* A container engine, which allows creation of request-processing
@@ -92,7 +132,7 @@ struct container_instance_info_struct
 struct container_api_struct
 {
 	void *reserved1;
-	void *reserved2;
+	unsigned long (*addref)(CONTAINER *me);	
 	unsigned long (*release)(CONTAINER *me);
 	/* Create a new instance */
 	int (*instance)(CONTAINER *me, CONTAINER_INSTANCE_HOST *host, const CONTAINER_INSTANCE_INFO *info, CONTAINER_INSTANCE **out);
@@ -122,7 +162,7 @@ typedef enum
 struct endpoint_api_struct
 {
 	void *reserved1;
-	void *reserved2;
+	unsigned long (*addref)(ENDPOINT *me);
 	unsigned long (*release)(ENDPOINT *me);
 	/* Return the mode of the endpoint */
 	ENDPOINT_MODE (*mode)(ENDPOINT *me);
@@ -138,9 +178,9 @@ struct endpoint_api_struct
 struct endpoint_server_api_struct
 {
 	void *reserved1;
-	void *reserved2;
-	void *reserved3;
-	int (*endpoint)(ENDPOINT_SERVER *me, ENDPOINT **endpoint);
+	unsigned long (*addref)(ENDPOINT_SERVER *me);
+	unsigned long (*release)(ENDPOINT_SERVER *me);
+	int (*endpoint)(ENDPOINT_SERVER *me, URI *uri, ENDPOINT **endpoint);
 };
 
 /* A request which will be processed; implemented by endpoint plug-ins */
@@ -149,9 +189,23 @@ struct container_request_api_struct
 	void *reserved1;
 	unsigned long (*addref)(CONTAINER_REQUEST *me);
 	unsigned long (*release)(CONTAINER_REQUEST *me);
+
+	/* High-level introspection methods */
+	int (*timestamp)(CONTAINER_REQUEST *me, struct timeval *tv);
 	const char *(*protocol)(CONTAINER_REQUEST *me);
 	const char *(*method)(CONTAINER_REQUEST *me);
 	const char *(*request_uri_str)(CONTAINER_REQUEST *me);
+	
+	/* Low-level introspection methods */
+	const char *(*getenv)(CONTAINER_REQUEST *me, const char *name);
+	
+	/* I/O */
+	int (*header)(CONTAINER_REQUEST *me, const char *name, const char *value, int replace);
+	int (*write)(CONTAINER_REQUEST *me, const char *buf, size_t buflen);
+	int (*puts)(CONTAINER_REQUEST *me, const char *str);
+	int (*close)(CONTAINER_REQUEST *me);
+	int (*freadfile)(CONTAINER_REQUEST *me, FILE *fin);
+	int (*readfile)(CONTAINER_REQUEST *me, const char *path);
 };
 
 
@@ -167,5 +221,8 @@ struct container_instance_host_api_struct
 	int (*request)(CONTAINER_INSTANCE_HOST *me, CONTAINER_REQUEST **req);
 };
 
+# if defined(__cplusplus)
+}
+# endif
 
 #endif /*!CONTAINERWARE_H_*/

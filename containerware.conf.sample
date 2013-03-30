@@ -1,0 +1,10 @@
+[global]
+
+[modules]
+module=endpoints/dummy/.libs/dummy.so
+module=endpoints/fcgi/.libs/fcgi.so
+module=containers/info/.libs/info.so
+
+[container: info]
+mininstances=4
+endpoint=fcgi://localhost:9995

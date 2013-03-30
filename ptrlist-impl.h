@@ -88,6 +88,12 @@ PTRLIST_IDENT(add_unlocked)(PTRLIST *list, PTRLIST_TYPE *item)
 	PTRLIST_TYPE **p;
 	size_t c;
 	
+	if(!list->blocksize)
+	{
+		log_printf("ptrlist", LOG_CRIT, "object list has not been properly initialised");
+		errno = EPERM;
+		return -1;		
+	}
 	if(list->count + 1 > list->allocated)
 	{	
 		p = (PTRLIST_TYPE **) realloc(list->list, sizeof(PTRLIST_TYPE *) * (list->allocated + list->blocksize));
@@ -106,7 +112,7 @@ PTRLIST_IDENT(add_unlocked)(PTRLIST *list, PTRLIST_TYPE *item)
 			list->count++;
 			return 0;
 		}
-	}
+	}	
 	/* This should never happen */
 	errno = EPERM;
 	return -1;

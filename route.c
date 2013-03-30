@@ -2,6 +2,8 @@
 # include "config.h"
 #endif
 
+#define LOG_FACILITY                   "route"
+
 #include "p_containerware.h"
 
 /* Given a request, locate a suitable container to process it.
@@ -12,10 +14,10 @@ route_request(CONTAINER_REQUEST *req, LISTENER *source)
 {
 	if(source->host)
 	{
-		fprintf(stderr, "route: will route request to host\n");
+		DPRINTF("routing request directly to instance");
 		return route_request_host(req, source, source->host);
 	}
-	fprintf(stderr, "route: nothing to do, bailing\n");
+	DPRINTF("don't know how to route a request from this endpoint");
 	return 0;
 }
 
@@ -24,11 +26,11 @@ route_request_host(CONTAINER_REQUEST *req, LISTENER *source, CONTAINER_HOST *hos
 {
 	CONTAINER_INSTANCE_HOST *instance;
 	
-	instance = host_locate_instance(host);
+	instance = instance_locate(host);
 	if(!instance)
 	{
-		fprintf(stderr, "route: failed to locate an instance for the host\n");
+		LPRINTF(LOG_ERR, "failed to locate an instance to process this request");
 		return -1;
 	}
-	return host_queue_request(instance, req, source);
+	return instance_queue_request(instance, req, source);
 }

@@ -2,45 +2,55 @@
 # include "config.h"
 #endif
 
+#define LOG_FACILITY                   "listener"
+
 #include "p_containerware.h"
 
-static ENDPOINT_SERVER *dummy_server;
 static struct listener_list_struct listeners;
-static pthread_t listener_socket_thread;
 
-static void *listener_socket_handler_(void *dummy);
-static void *listener_thread_handler_(void *ptr);
-
+/* Initialise listeners
+ *
+ * Threading: called only by the main thread
+ */
 int
 listener_init(void)
 {
 	listener_list_init(&listeners, 16);
-	dummy_server = dummy_endpoint_server();
-	pthread_create(&listener_socket_thread, NULL, listener_socket_handler_, NULL);
+	listener_socket_init();
 	return 0;
 }
 
+/* Create a new endpoint based on the supplied URI string, optionally
+ * attaching it to a constainer host.
+ */
 ENDPOINT *
-listener_add(const char *name, CONTAINER_HOST *host)
+listener_add(const char *str, CONTAINER_HOST *host)
 {
-	ENDPOINT_SERVER *server;
+	URI *uri;
+	ENDPOINT *ep;
+	
+	uri = uri_create_str(str, NULL);
+	if(!uri)
+	{
+		return NULL;
+	}
+	ep = listener_add_uri(uri, host);
+	uri_destroy(uri);
+	return ep;
+}
+
+/* Create a new endpoint based on the supplied URI, optionally
+ * attaching it to a container host.
+ */
+ENDPOINT *
+listener_add_uri(URI *uri, CONTAINER_HOST *host)
+{
 	ENDPOINT *p;
 	int r;
 
 	p = NULL;
-	server = NULL;
-	
-	if(!strcmp(name, "dummy"))
-	{
-		server = dummy_server;
-	}
-	if(!server)
-	{
-		errno = EINVAL;
-		return NULL;
-	}
-	r = server->api->endpoint(server, &p);
-	if(r)
+	r = server_endpoint_uri(uri, &p);
+	if(r || !p)
 	{
 		return NULL;
 	}
@@ -53,13 +63,19 @@ listener_add(const char *name, CONTAINER_HOST *host)
 	return p;
 }
 
+/* Create a new listener associated with the supplied endpoint,
+ * optionally attaching it to the supplied container host.
+ *
+ * We will already retain endpoint prior to invoking this function;
+ * an error return should result in it being released.
+ */
 int
 listener_add_endpoint(ENDPOINT *endpoint, CONTAINER_HOST *host)
 {
 	struct listener_struct *p;
 	int r;
 	
-	fprintf(stderr, "listener: Adding new endpoint\n");
+	DPRINTF("adding a new endpoint");
 	p = (struct listener_struct *) calloc(1, sizeof(struct listener_struct));
 	if(!p)
 	{
@@ -92,7 +108,7 @@ listener_add_endpoint(ENDPOINT *endpoint, CONTAINER_HOST *host)
 			p->state = LS_SOCKET;
 			break;
 		case EM_THREAD:
-			if(pthread_create(&(p->thread), NULL, listener_thread_handler_, (void *) p))
+			if(listener_thread_create(p) == -1)
 			{
 				listener_list_remove(&listeners, p);
 				pthread_mutex_unlock(&(p->mutex));
@@ -103,79 +119,6 @@ listener_add_endpoint(ENDPOINT *endpoint, CONTAINER_HOST *host)
 			break;
 	}
 	pthread_mutex_unlock(&(p->mutex));
-	fprintf(stderr, "listener: Endpoint added\n");
+	DPRINTF("endpoint added");
 	return 0;
-}
-
-static void *
-listener_socket_handler_(void *dummy)
-{
-	fd_set fds;
-	struct timeval tv;
-
-	(void) dummy;
-
-	fprintf(stderr, "listener_socket_thread: thread started\n");
-	for(;;)
-	{
-		fprintf(stderr, "listener_socket_thread: listening...\n");
-		FD_ZERO(&fds);
-		/* Iterate all of the listeners which use sockets and add their
-		 * descriptors to the set
-		 * listener_socket_set_all_();
-		 */
-		tv.tv_sec = 10;
-		tv.tv_usec = 0;
-		select(FD_SETSIZE, &fds, NULL, NULL, &tv);
-		/* Check select() return value */
-		/* Iterate all of the listeners which use sockets and check if
-		 * there is been activity in the set
-		 * listener_socket_check_all_();
-		 */
-	}
-	return NULL;
-}
-
-static void *
-listener_thread_handler_(void *ptr)
-{
-	CONTAINER_REQUEST *req;
-	struct listener_struct *me;
-	int r;
-	
-	me = (struct listener_struct *) ptr;
-	fprintf(stderr, "listener: starting up\n");
-	pthread_mutex_lock(&(me->mutex));
-	me->state = LS_RUNNING;
-	for(;;)
-	{
-		fprintf(stderr, "listener: waiting for activity...\n");
-		r = me->endpoint->api->process(me->endpoint);
-		if(r == -1)
-		{
-			fprintf(stderr, "listener: endpoint returned error status: %s\n", strerror(errno));
-			break;
-		}
-		if(!r)
-		{
-			fprintf(stderr, "listener: ended normally\n");
-			break;
-		}
-		fprintf(stderr, "listener: request is ready\n");
-		r = me->endpoint->api->acquire(me->endpoint, &req);
-		if(r)
-		{
-			fprintf(stderr, "listener: failed to obtain request: %s\n", strerror(errno));
-			break;
-		}
-		fprintf(stderr, "listener: now have request\n");
-		route_request(req, me);
-		req->api->release(req);
-	}
-	me->status = LS_ZOMBIE;
-	me->status = r;
-	me->thread = 0;
-	pthread_mutex_unlock(&(me->mutex));
-	fprintf(stderr, "listener: thread is terminating\n");
-	return me;
 }

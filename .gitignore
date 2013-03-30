@@ -1,4 +1,5 @@
 /containerware
+/containerware.conf
 *.o
 *.obj
 *.exe
