@@ -30,6 +30,7 @@ struct endpoint_server_struct
 	ENDPOINT_SERVER_COMMON;
 	pthread_mutex_t lock;
 	size_t refcount;
+	CONTAINERWARE *cw;
 };
 
 struct endpoint_struct
@@ -38,6 +39,7 @@ struct endpoint_struct
 	ENDPOINT_SERVER *server;
 	pthread_mutex_t lock;
 	size_t refcount;
+	CONTAINERWARE *cw;
 	/* FastCGI listening socket */
 	int fd;
 	/* The next request to be acquired */
@@ -48,6 +50,7 @@ struct endpoint_struct
 struct container_request_struct
 {
 	CONTAINER_REQUEST_COMMON;
+	CONTAINERWARE *cw;
 	ENDPOINT *endpoint;
 	pthread_mutex_t lock;
 	size_t refcount;

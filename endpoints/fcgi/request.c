@@ -43,6 +43,8 @@ request_create_(ENDPOINT *ep)
 		return NULL;
 	}
 	pthread_mutex_init(&(p->lock), NULL);
+	ep->cw->api->addref(ep->cw);
+	p->cw = ep->cw;
 	ep->api->addref(ep);
 	p->endpoint = ep;
 	p->refcount = 1;
@@ -80,8 +82,9 @@ request_release_(CONTAINER_REQUEST *me)
 	pthread_mutex_unlock(&(me->lock));
 	if(!r)
 	{
-		fprintf(stderr, "fcgi: freeing request %08lx\n", (unsigned long) me);
+		DPRINTF(me->cw, "freeing request %08lx", (unsigned long) me);
 		FCGX_Finish_r(me->request);
+		me->cw->api->release(me->cw);
 		me->endpoint->api->release(me->endpoint);
 		pthread_mutex_destroy(&(me->lock));
 		free(me);

@@ -47,8 +47,7 @@ endpoint_create_(ENDPOINT_SERVER *server, URI *uri)
 		}
 		if(!p)
 		{
-/*			LPRINTF(LOG_ERR, "failed to obtain either a socket path or host:port from URI"); */
-			fprintf(stderr, "fcgi: failed to obtain either a socket path or host:port from URI\n");
+			LPRINTF(server->cw, CWLOG_ERR, "failed to obtain either a socket path or host:port from URI");
 			return NULL;
 		}
 	}
@@ -56,17 +55,20 @@ endpoint_create_(ENDPOINT_SERVER *server, URI *uri)
 	if(!ep)
 	{
 		return NULL;
-	}	
-	fprintf(stderr, "fcgi: opening socket with specifier '%s'\n", p);
+	}
+	DPRINTF(server->cw, "opening socket with specifier '%s'", p);
 	fd = FCGX_OpenSocket(p, DEFAULT_FASTCGI_BACKLOG);
 	free(p);
 	if(fd == -1)
 	{
+		LPRINTF(server->cw, CWLOG_ERR, "failed to open socket '%s'", p);
 		free(ep);
 		return NULL;
 	}	
 	server->api->addref(server);
 	ep->server = server;
+	server->cw->api->addref(server->cw);
+	ep->cw = server->cw;
 	ep->refcount = 1;
 	ep->api = &endpoint_api_;
 	ep->fd = fd;
@@ -97,6 +99,7 @@ endpoint_release_(ENDPOINT *me)
 	pthread_mutex_unlock(&(me->lock));
 	if(!r)
 	{
+		me->cw->api->release(me->cw);
 		me->server->api->release(me->server);
 		pthread_mutex_destroy(&(me->lock));
 		free(me);
@@ -166,7 +169,7 @@ endpoint_acquire_(ENDPOINT *me, CONTAINER_REQUEST **req)
 	{
 		return -1;
 	}
-	fprintf(stderr, "fcgi: returning new request %08lx\n", (unsigned long) (*req));
+	DPRINTF(me->cw, "returning new request %08lx", (unsigned long) (*req));
 	return 0;
 }
 
