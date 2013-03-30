@@ -16,8 +16,9 @@ containerware_SOURCES = p_containerware.h ptrlist-impl.h \
 
 containerware_LDADD = libiniparser.la \
 	@LIBURI_LDFLAGS@ @LIBURI_LOCAL_LIBS@ @LIBURI_LIBS@ \
-	@fcgi_LDFLAGS@ @fcgi_LIBS@
-containerware_CPPFLAGS = @LIBURI_CPPFLAGS@
+	@LIBJSONDATA_LDFLAGS@ @LIBJSONDATA_LOCAL_LIBS@ @LIBJSONDATA_LIBS@
+	
+containerware_CPPFLAGS = @LIBURI_CPPFLAGS@ @LIBJSONDATA_CPPFLAGS@
 
 libiniparser_la_SOURCES = \
 	iniparser/src/dictionary.h \

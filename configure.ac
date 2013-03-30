@@ -44,6 +44,8 @@ AC_SUBST([INCLUDES])
 BT_REQUIRE_LIBDL
 BT_REQUIRE_LIBUUID
 BT_REQUIRE_LIBURI_INCLUDED
+BT_REQUIRE_LIBJSONDATA_INCLUDED
+BT_REQUIRE_PTHREAD
 
 AC_ARG_WITH([fcgi],[AS_HELP_STRING(--with-fcgi=PREFIX)],[fcgi_prefix="$withval"],[fcgi_prefix="no"])
 if test x"$fcgi_prefix" = x"yes" ; then
