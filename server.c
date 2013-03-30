@@ -32,7 +32,7 @@ server_register(const char *scheme, ENDPOINT_SERVER *server)
 	{
 		if(servers.list[c] && !strcmp(servers.list[c]->scheme, scheme))
 		{
-			LPRINTF(LOG_ERR, "failed to register server for scheme '%s': already registered", scheme);
+			LPRINTF(CWLOG_ERR, "failed to register server for scheme '%s': already registered", scheme);
 			server_list_unlock(&servers);
 			server->api->release(server);
 			return -1;

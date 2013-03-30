@@ -40,19 +40,19 @@ listener_thread_handler_(void *ptr)
 		r = me->endpoint->api->process(me->endpoint);
 		if(r == -1)
 		{
-			LPRINTF(LOG_CRIT, "endpoint returned error: %s", strerror(errno));
+			LPRINTF(CWLOG_CRIT, "endpoint returned error: %s", strerror(errno));
 			break;
 		}
 		if(!r)
 		{
-			LPRINTF(LOG_INFO, "endpoint terminated normally");
+			LPRINTF(CWLOG_INFO, "endpoint terminated normally");
 			break;
 		}
 		DPRINTF("request is ready to be acquired");
 		r = me->endpoint->api->acquire(me->endpoint, &req);
 		if(r)
 		{
-			LPRINTF(LOG_CRIT, "failed to acquire a request from endpoint: %s", strerror(errno));
+			LPRINTF(CWLOG_CRIT, "failed to acquire a request from endpoint: %s", strerror(errno));
 			break;
 		}
 		DPRINTF("request has been acquired and will now be routed");

@@ -18,7 +18,15 @@ static struct container_worker_host_api_struct worker_api_ =
 	worker_request_
 };
 
+static struct worker_list_struct workers;
 static uint32_t worker_next_id = 100;
+
+int
+worker_init(void)
+{
+	worker_list_init(&workers, 0);
+	return 0;
+}
 
 /* Create a new worker and add it to a container's list of active
  * workers.
@@ -56,12 +64,12 @@ worker_create(CONTAINER_HOST *host)
 	r = host->container->api->worker(host->container, p, &info, &(p->worker));
 	if(r)
 	{
-		LPRINTF(LOG_CRIT, "failed to obtain new worker from container: %s", strerror(errno));
+		LPRINTF(CWLOG_CRIT, "failed to obtain new worker from container: %s", strerror(errno));
 		p->worker = NULL;
 	}
 	else if(!p->worker)
 	{
-		LPRINTF(LOG_CRIT, "failed to obtain new worker from container (no error reported)");
+		LPRINTF(CWLOG_CRIT, "failed to obtain new worker from container (no error reported)");
 	}
 	if(!p->worker)
 	{
@@ -71,10 +79,12 @@ worker_create(CONTAINER_HOST *host)
 		free(p);	
 		return NULL;
 	}
+	worker_list_add(&workers, p);
 	worker_list_wrlock(&(host->workers));
 	r = worker_list_add_unlocked(&(host->workers), p);
 	if(r)
 	{
+		worker_list_remove(&workers, p);
 		worker_list_unlock(&(host->workers));
 		pthread_mutex_unlock(&(p->mutex));
 		pthread_mutex_destroy(&(p->mutex));
@@ -242,7 +252,7 @@ worker_log_request_(CONTAINER_WORKER_HOST *me, CONTAINER_REQUEST *req)
 	req->api->timestamp(req, &tv);
 	gmtime_r((time_t *) &(tv.tv_sec), &tm);
 	strftime(tbuf, sizeof(tbuf), "%d/%b/%Y:%H:%M:%S %z", &tm);
-	HLPRINTF(me, LOG_ACCESS, "%s %s %s [%s] \"%s %s %s\" %d %s", host, ident, user, tbuf, method, path, protocol, status, bbuf);
+	HLPRINTF(me, CWLOG_ACCESS, "%s %s %s [%s] \"%s %s %s\" %d %s", host, ident, user, tbuf, method, path, protocol, status, bbuf);
 	return 0;
 }
 

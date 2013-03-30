@@ -4,7 +4,7 @@
 
 #include "p_containerware.h"
 
-static int log_level = LOG_DEBUG;
+static int log_level = CWLOG_DEBUG;
 static pthread_mutex_t log_lock;
 static const char *short_program_name = "cw";
 
@@ -63,7 +63,7 @@ log_prefix_(FILE *fout, CONTAINER_WORKER_HOST *host, int severity)
 	t = time(NULL);
 	gmtime_r(&t, &tm);
 	strftime(tbuf, sizeof(tbuf), "%b %e %H:%M:%S", &tm);
-	if(severity < 0 || severity > LOG_DEBUG)
+	if(severity < 0 || severity > CWLOG_DEBUG)
 	{
 		snprintf(sbuf, sizeof(sbuf), "%d", severity);
 		s = sbuf;

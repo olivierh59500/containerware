@@ -29,7 +29,7 @@ route_request_host(CONTAINER_REQUEST *req, LISTENER *source, CONTAINER_HOST *hos
 	worker = worker_locate(host);
 	if(!worker)
 	{
-		LPRINTF(LOG_ERR, "failed to locate a worker to process this request");
+		LPRINTF(CWLOG_ERR, "failed to locate a worker to process this request");
 		return -1;
 	}
 	return worker_queue_request(worker, req, source);

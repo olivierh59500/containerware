@@ -90,7 +90,7 @@ PTRLIST_IDENT(add_unlocked)(PTRLIST *list, PTRLIST_TYPE *item)
 	
 	if(!list->blocksize)
 	{
-		log_printf("ptrlist", LOG_CRIT, "object list has not been properly initialised");
+		log_printf("ptrlist", CWLOG_CRIT, "object list has not been properly initialised");
 		errno = EPERM;
 		return -1;		
 	}

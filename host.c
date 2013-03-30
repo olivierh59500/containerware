@@ -35,7 +35,7 @@ host_add(dictionary *config)
 	}
 	if(container_locate(handler, &c) == -1)
 	{
-		return -1;
+		return NULL;
 	}
 	if(!c)
 	{

@@ -37,13 +37,19 @@ static unsigned long module_api_addref_(CONTAINERWARE *me);
 static unsigned long module_api_release_(CONTAINERWARE *me);
 static int module_api_register_endpoint_(CONTAINERWARE *me, const char *scheme, ENDPOINT_SERVER *server);
 static int module_api_register_container_(CONTAINERWARE *me, const char *name, CONTAINER *container);
+static int module_api_lputs_(CONTAINERWARE *me, int severity, const char *str);
+static int module_api_lvprintf_(CONTAINERWARE *me, int severity, const char *fmt, va_list ap);
+static int module_api_lprintf_(CONTAINERWARE *me, int severity, const char *fmt, ...);
 
 static struct containerware_api_struct module_api_ = {
 	NULL,
 	module_api_addref_,
 	module_api_release_,
 	module_api_register_endpoint_,
-	module_api_register_container_
+	module_api_register_container_,
+	module_api_lputs_,
+	module_api_lvprintf_,
+	module_api_lprintf_
 };
 
 int
@@ -57,21 +63,21 @@ module_load(const char *path)
 	h = dlopen(path, RTLD_NOW|RTLD_LOCAL);
 	if(!h)
 	{
-		LPRINTF(LOG_ERR, "failed to load %s: %s", path, dlerror());
+		LPRINTF(CWLOG_ERR, "failed to load %s: %s", path, dlerror());
 		return -1;
 	}
 	DPRINTF("loaded module %s as 0x%08x", path, (unsigned long) h);
 	cw = module_api_create_(h, path);
 	if(!cw)
 	{
-		LPRINTF(LOG_CRIT, "failed to create API instance to pass to module: %s", strerror(errno));
+		LPRINTF(CWLOG_CRIT, "failed to create API instance to pass to module: %s", strerror(errno));
 		dlclose(h);
 		return -1;
 	}
 	initfn = dlsym(h, "containerware_module_init");
 	if(!initfn)
 	{
-		LPRINTF(LOG_CRIT, "module %s cannot be initialised", path);
+		LPRINTF(CWLOG_CRIT, "module %s cannot be initialised", path);
 		return -1;
 	}
 	initfn(cw);
@@ -133,4 +139,25 @@ module_api_register_container_(CONTAINERWARE *me, const char *name, CONTAINER *c
 	(void) me;
 	
 	return container_register(name, container);
+}
+
+static int
+module_api_lputs_(CONTAINERWARE *me, int severity, const char *str)
+{
+	return log_puts(me->name, severity, str);
+}
+
+static int
+module_api_lvprintf_(CONTAINERWARE *me, int severity, const char *fmt, va_list ap)
+{
+	return log_vprintf(me->name, severity, fmt, ap);
+}
+
+static int
+module_api_lprintf_(CONTAINERWARE *me, int severity, const char *fmt, ...)
+{
+	va_list ap;
+	
+	va_start(ap, fmt);
+	return log_vprintf(me->name, severity, fmt, ap);
 }

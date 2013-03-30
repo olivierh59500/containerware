@@ -25,17 +25,6 @@
 
 # include "containerware.h"
 
-/* Log levels */
-# define LOG_DEBUG                     8
-# define LOG_ACCESS                    7
-# define LOG_INFO                      6
-# define LOG_NOTICE                    5
-# define LOG_WARN                      4
-# define LOG_ERR                       3
-# define LOG_CRIT                      2
-# define LOG_ALERT                     1
-# define LOG_EMERG                     0
-
 typedef struct listener_struct LISTENER;
 typedef struct container_host_struct CONTAINER_HOST;
 
@@ -168,11 +157,11 @@ int module_load(const char *path);
 
 /* Logging */
 
-# define DFPRINTF(fac, ...) log_printf(fac, LOG_DEBUG, __VA_ARGS__)
-# define DHPRINTF(host, ...) log_hprintf(host, LOG_DEBUG, __VA_ARGS__)
+# define DFPRINTF(fac, ...) log_printf(fac, CWLOG_DEBUG, __VA_ARGS__)
+# define DHPRINTF(host, ...) log_hprintf(host, CWLOG_DEBUG, __VA_ARGS__)
 # define HLPRINTF(host, severity, ...) log_hprintf(host, severity, __VA_ARGS__)
 # ifdef LOG_FACILITY
-#  define DPRINTF(...) log_printf(LOG_FACILITY, LOG_DEBUG, __VA_ARGS__)
+#  define DPRINTF(...) log_printf(LOG_FACILITY, CWLOG_DEBUG, __VA_ARGS__)
 #  define LPRINTF(severity, ...) log_printf(LOG_FACILITY, severity, __VA_ARGS__)
 # endif
 
@@ -219,6 +208,7 @@ CONTAINER_HOST *host_add_container(CONTAINER *container, dictionary *config);
 int host_set_minchildren(CONTAINER_HOST *host, size_t minchildren);
 
 /* Worker */
+int worker_init(void);
 CONTAINER_WORKER_HOST *worker_create(CONTAINER_HOST *host);
 CONTAINER_WORKER_HOST *worker_locate(CONTAINER_HOST *host);
 int worker_queue_request(CONTAINER_WORKER_HOST *worker, CONTAINER_REQUEST *req, LISTENER *source);

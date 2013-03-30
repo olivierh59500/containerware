@@ -24,6 +24,7 @@ main(int argc, char **argv)
 	server_init();
 	listener_init();
 	host_init();
+	worker_init();
 	config_load();
 	config_load_modules();
 	config_foreach_container(init_host_);
@@ -66,17 +67,17 @@ init_host_(const char *name, dictionary *dict)
 	host = host_add(dict);
 	if(!host)
 	{
-		LPRINTF(LOG_CRIT, "failed to create host from section [%s]: %s", name, strerror(errno));
+		LPRINTF(CWLOG_CRIT, "failed to create host from section [%s]: %s", name, strerror(errno));
 		return 0;
 	}
-	LPRINTF(LOG_INFO, "container '%s' has been created", name);
+	LPRINTF(CWLOG_INFO, "container '%s' has been created", name);
 	ep = iniparser_getstring(dict, "endpoint", NULL);
 	if(ep)
 	{
-		LPRINTF(LOG_INFO, "adding endpoint '%s' to container '%s'", ep, name);
+		LPRINTF(CWLOG_INFO, "adding endpoint '%s' to container '%s'", ep, name);
 		if(listener_add(ep, host) == NULL)
 		{
-			LPRINTF(LOG_CRIT, "failed to create endpoint '%s': %s", ep, strerror(errno));
+			LPRINTF(CWLOG_CRIT, "failed to create endpoint '%s': %s", ep, strerror(errno));
 		}
 	}
 	return 0;

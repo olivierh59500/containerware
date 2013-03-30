@@ -33,7 +33,7 @@ container_register(const char *name, CONTAINER *container)
 	{
 		if(containers.list[c] && !strcmp(containers.list[c]->name, name))
 		{
-			LPRINTF(LOG_ERR, "failed to register container '%s': already registered", name);
+			LPRINTF(CWLOG_ERR, "failed to register container '%s': already registered", name);
 			container_list_unlock(&containers);
 			container->api->release(container);
 			return -1;
@@ -50,7 +50,7 @@ container_register(const char *name, CONTAINER *container)
 	p->container = container;
 	if(container_list_add(&containers, p) == -1)
 	{
-		LPRINTF(LOG_CRIT, "failed to register container '%s': %s", name, strerror(errno));
+		LPRINTF(CWLOG_CRIT, "failed to register container '%s': %s", name, strerror(errno));
 		free(p);
 		container->api->release(container);
 		return -1;

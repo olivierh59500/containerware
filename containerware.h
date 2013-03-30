@@ -1,6 +1,7 @@
 #ifndef CONTAINERWARE_H_
 # define CONTAINERWARE_H_              1
 
+# include <stdarg.h>
 # include <inttypes.h>
 # include <sys/types.h>
 # include <sys/time.h>
@@ -14,6 +15,17 @@
 # if defined(__cplusplus)
 extern "C" {
 # endif
+	
+/* Log levels */
+# define CWLOG_DEBUG                   8
+# define CWLOG_ACCESS                  7
+# define CWLOG_INFO                    6
+# define CWLOG_NOTICE                  5
+# define CWLOG_WARN                    4
+# define CWLOG_ERR                     3
+# define CWLOG_CRIT                    2
+# define CWLOG_ALERT                   1
+# define CWLOG_EMERG                   0
 
 # ifdef CONTAINER_PLUGIN_INTERNAL
 #  define CONTAINER_STRUCT_DEFINED_    1
@@ -109,6 +121,9 @@ struct containerware_api_struct
 	unsigned long (*release)(CONTAINERWARE *me);
 	int (*register_endpoint)(CONTAINERWARE *me, const char *scheme, ENDPOINT_SERVER *server);
 	int (*register_container)(CONTAINERWARE *me, const char *name, CONTAINER *container);
+	int (*lputs)(CONTAINERWARE *me, int severity, const char *str);
+	int (*lvprintf)(CONTAINERWARE *me, int severity, const char *fmt, va_list ap);
+	int (*lprintf)(CONTAINERWARE *me, int severity, const char *fmt, ...);
 };
 
 /* Information passed to a container about a worker */
