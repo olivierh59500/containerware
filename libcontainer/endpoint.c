@@ -274,8 +274,7 @@ cw_request_info_init(struct cw_request_info_struct *info, jd_var *env)
 	char hexbuf[3];
 	long hexval;
 	
-	memset(&(info->request_vstr), 0, sizeof(jd_var));
-	memset(&(info->request_array), 0, sizeof(jd_var));
+	memset(info, 0, sizeof(struct cw_request_info_struct));
 	request_uri = jd_get_ks(env, "REQUEST_URI", 0);
 	query_string = jd_get_ks(env, "QUERY_STRING", 0);
 	s = NULL;
@@ -342,7 +341,44 @@ cw_request_info_init(struct cw_request_info_struct *info, jd_var *env)
 		}
 		free(buf);
 	}
+	/* The parameters array begins life as a clone of the request array */
+	jd_clone(&(info->params_array), &(info->request_array), 1);
+	/* The current array begins empty */
+	jd_set_array(&(info->current_array), jd_count(&(info->request_array)));
+	/* cw_request_info_update_(info); */
 	return 0;
+}
+
+const char *
+cw_request_info_consume(struct cw_request_info_struct *info)
+{
+	jd_var *slot;
+	
+	slot = cw_request_info_vconsume(info);
+	if(!slot)
+	{
+		return NULL;
+	}
+	return jd_bytes(slot, NULL);
+}
+
+jd_var *
+cw_request_info_vconsume(struct cw_request_info_struct *info)
+{
+	size_t c;
+	jd_var entry = JD_INIT;
+	jd_var *slot;
+	
+	if(!jd_count(&(info->params_array)))
+	{
+		return NULL;
+	}
+	jd_shift(&(info->params_array), 1, &entry);
+	slot = jd_push(&(info->current_array), 1);
+	jd_assign(slot, &entry);
+	jd_release(&entry);
+	/* cw_request_info_update_(info); */
+	return slot;
 }
 
 int
@@ -350,6 +386,9 @@ cw_request_info_destroy(struct cw_request_info_struct *info)
 {
 	jd_release(&(info->request_vstr));
 	jd_release(&(info->request_array));
+	jd_release(&(info->params_array));
+	jd_release(&(info->current_array));
+	
 	uri_destroy(info->request_uri);
 	return 0;
 }

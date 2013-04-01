@@ -10,6 +10,7 @@ static int request_timestamp_(CONTAINER_REQUEST *me, struct timeval *tv);
 static int request_status_(CONTAINER_REQUEST *me);
 static const char *request_uri_str_(CONTAINER_REQUEST *me);
 static const char *request_getenv_(CONTAINER_REQUEST *me, const char *var);
+static const char *request_consume_(CONTAINER_REQUEST *me);
 static int request_environment_(CONTAINER_REQUEST *me, jd_var *out);
 static int request_header_(CONTAINER_REQUEST *me, const char *name, const char *value, int replace);
 static int request_write_(CONTAINER_REQUEST *me, const char *buf, size_t buflen);
@@ -26,6 +27,7 @@ static struct container_request_api_struct request_api_ =
 	cw_request_protocol,
 	cw_request_method,
 	request_uri_str_,
+	request_consume_,
 	request_getenv_,
 	request_environment_,
 	request_header_,
@@ -107,6 +109,12 @@ static const char *
 request_uri_str_(CONTAINER_REQUEST *me)
 {
 	return request_getenv_(me, "REQUEST_URI");
+}
+
+static const char *
+request_consume_(CONTAINER_REQUEST *me)
+{
+	return cw_request_info_consume(&(me->info));
 }
 
 static const char *

@@ -225,8 +225,10 @@ struct container_request_api_struct
 	request array:      array()     [path components relative to app root]
 	request base:       base()      [always has a trailing slash]
 	request resource:   resource()  [no trailing slash; 'index' is added if at root]
-    */	
+    */
 	
+	const char *(*consume)(CONTAINER_REQUEST *me);
+
 	/* Low-level introspection methods */
 	const char *(*getenv)(CONTAINER_REQUEST *me, const char *name);
 	int (*environment)(CONTAINER_REQUEST *me, jd_var *out);
@@ -273,6 +275,10 @@ struct cw_request_info_struct
 	jd_var request_vstr;
 	const char *request_str;
 	jd_var request_array;
+	
+	jd_var params_array;
+	
+	jd_var current_array;
 };
 
 int cw_request_puts(CONTAINER_REQUEST *me, const char *str);
@@ -288,6 +294,8 @@ int cw_request_headers_status(jd_var *headers);
 int cw_request_headers_send(jd_var *headers, int (*callback)(void *data, const char *name, const char *value, int more), void *data);
 int cw_request_info_init(struct cw_request_info_struct *info, jd_var *env);
 int cw_request_info_destroy(struct cw_request_info_struct *info);
+const char *cw_request_info_consume(struct cw_request_info_struct *info);
+jd_var *cw_request_info_vconsume(struct cw_request_info_struct *info);
 
 # if defined(__cplusplus)
 }
