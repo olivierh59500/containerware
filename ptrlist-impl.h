@@ -102,7 +102,12 @@ PTRLIST_IDENT(add_unlocked)(PTRLIST *list, PTRLIST_TYPE *item)
 			return -1;
 		}
 		list->list = p;
+		c = list->allocated;
 		list->allocated += list->blocksize;
+		for(; c < list->allocated; c++)
+		{
+			list->list[c] = NULL;
+		}
 	}
 	for(c = 0; c < list->allocated; c++)
 	{
@@ -121,9 +126,29 @@ PTRLIST_IDENT(add_unlocked)(PTRLIST *list, PTRLIST_TYPE *item)
 int
 PTRLIST_IDENT(remove)(PTRLIST *list, PTRLIST_TYPE *item)
 {
-	(void) list;
-	(void) item;
-#warning ptrlist::remove() is not yet implemented
+	int r;
+	
+	PTRLIST_IDENT(wrlock)(list);
+	r = PTRLIST_IDENT(remove_unlocked)(list, item);
+	PTRLIST_IDENT(unlock)(list);
+	return r;
+}
+
+int
+PTRLIST_IDENT(remove_unlocked)(PTRLIST *list, PTRLIST_TYPE *item)
+{
+	size_t c;
+	
+	for(c = 0; c < list->allocated; c++)
+	{
+		if(list->list[c] == item)
+		{
+			list->list[c] = NULL;
+			list->count--;
+			return 0;
+		}
+	}
+	errno = ENOENT;
 	return -1;
 }
 
