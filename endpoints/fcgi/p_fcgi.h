@@ -63,6 +63,7 @@ struct container_request_struct
 	jd_var headers;
 	int headers_sent;
 	struct cw_request_info_struct info;
+	size_t wbytes;
 };
 
 int containerware_module_init(CONTAINERWARE *cw);

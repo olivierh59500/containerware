@@ -8,6 +8,8 @@ static unsigned long request_addref_(CONTAINER_REQUEST *me);
 static unsigned long request_release_(CONTAINER_REQUEST *me);
 static int request_timestamp_(CONTAINER_REQUEST *me, struct timeval *tv);
 static int request_status_(CONTAINER_REQUEST *me);
+static size_t request_rbytes_(CONTAINER_REQUEST *me);
+static size_t request_wbytes_(CONTAINER_REQUEST *me);
 static const char *request_protocol_(CONTAINER_REQUEST *me);
 static const char *request_method_(CONTAINER_REQUEST *me);
 static const char *request_uri_str_(CONTAINER_REQUEST *me);
@@ -25,6 +27,8 @@ static struct container_request_api_struct request_api_ =
 	request_release_,
 	request_timestamp_,
 	request_status_,
+	request_rbytes_,
+	request_wbytes_,
 	request_protocol_,
 	request_method_,
 	request_uri_str_,
@@ -99,6 +103,22 @@ request_status_(CONTAINER_REQUEST *me)
 {
 	(void) me;
 	return 200;
+}
+
+static size_t
+request_rbytes_(CONTAINER_REQUEST *me)
+{
+	(void) me;
+	
+	return (size_t) -1;
+}
+
+static size_t
+request_wbytes_(CONTAINER_REQUEST *me)
+{
+	(void) me;
+	
+	return (size_t) -1;
 }
 
 static const char *

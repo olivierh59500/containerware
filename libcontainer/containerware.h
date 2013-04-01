@@ -213,6 +213,8 @@ struct container_request_api_struct
 	/* High-level introspection methods */
 	int (*timestamp)(CONTAINER_REQUEST *me, struct timeval *tv);
 	int (*status)(CONTAINER_REQUEST *me);
+	size_t (*rbytes)(CONTAINER_REQUEST *me);
+	size_t (*wbytes)(CONTAINER_REQUEST *me);
 	const char *(*protocol)(CONTAINER_REQUEST *me);
 	const char *(*method)(CONTAINER_REQUEST *me);
 	const char *(*request_uri_str)(CONTAINER_REQUEST *me);

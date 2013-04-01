@@ -8,6 +8,8 @@ static unsigned long request_addref_(CONTAINER_REQUEST *me);
 static unsigned long request_release_(CONTAINER_REQUEST *me);
 static int request_timestamp_(CONTAINER_REQUEST *me, struct timeval *tv);
 static int request_status_(CONTAINER_REQUEST *me);
+static size_t request_rbytes_(CONTAINER_REQUEST *me);
+static size_t request_wbytes_(CONTAINER_REQUEST *me);
 static const char *request_uri_str_(CONTAINER_REQUEST *me);
 static const char *request_getenv_(CONTAINER_REQUEST *me, const char *var);
 static const char *request_consume_(CONTAINER_REQUEST *me);
@@ -24,6 +26,8 @@ static struct container_request_api_struct request_api_ =
 	request_release_,
 	request_timestamp_,
 	request_status_,
+	request_rbytes_,
+	request_wbytes_,
 	cw_request_protocol,
 	cw_request_method,
 	request_uri_str_,
@@ -105,6 +109,20 @@ request_status_(CONTAINER_REQUEST *me)
 	return cw_request_headers_status(&(me->headers));
 }
 
+static size_t
+request_rbytes_(CONTAINER_REQUEST *me)
+{
+	(void) me;
+	
+	return (size_t) -1;
+}
+
+static size_t
+request_wbytes_(CONTAINER_REQUEST *me)
+{
+	return me->wbytes;
+}
+
 static const char *
 request_uri_str_(CONTAINER_REQUEST *me)
 {
@@ -145,13 +163,21 @@ request_header_(CONTAINER_REQUEST *me, const char *name, const char *value, int 
 static int
 request_write_(CONTAINER_REQUEST *me, const char *buf, size_t buflen)
 {
+	int r;
+	
 	if(!me->headers_sent)
 	{
 		cw_request_headers_send(&(me->headers), request_write_header_, me);
 		FCGX_PutChar('\n', me->out);
+		me->wbytes++;
 		me->headers_sent = 1;
 	}
-	return FCGX_PutStr(buf, buflen, me->out);
+	r = FCGX_PutStr(buf, buflen, me->out);
+	if(r > 0)
+	{
+		me->wbytes += r;
+	}
+	return r;
 }
 
 static int
@@ -164,6 +190,7 @@ request_write_header_(void *data, const char *name, const char *value, int more)
 	FCGX_PutChar(' ', me->out);
 	FCGX_PutS(value, me->out);
 	FCGX_PutChar('\n', me->out);
+	me->wbytes += strlen(name) + strlen(value) + 3;
 	return 0;
 }
 

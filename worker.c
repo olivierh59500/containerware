@@ -246,7 +246,7 @@ worker_log_request_(CONTAINER_WORKER_HOST *me, CONTAINER_REQUEST *req)
 		protocol = "-";
 	}
 	status = req->api->status(req);
-	bytes = (size_t) -1;
+	bytes = req->api->wbytes(req);
 	if(bytes == (size_t) -1)
 	{
 		strcpy(bbuf, "-");
