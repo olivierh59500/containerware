@@ -7,13 +7,13 @@
 static unsigned long request_addref_(CONTAINER_REQUEST *me);
 static unsigned long request_release_(CONTAINER_REQUEST *me);
 static int request_timestamp_(CONTAINER_REQUEST *me, struct timeval *tv);
-static const char *request_protocol_(CONTAINER_REQUEST *me);
-static const char *request_method_(CONTAINER_REQUEST *me);
+static int request_status_(CONTAINER_REQUEST *me);
 static const char *request_uri_str_(CONTAINER_REQUEST *me);
 static const char *request_getenv_(CONTAINER_REQUEST *me, const char *var);
+static int request_environment_(CONTAINER_REQUEST *me, jd_var *out);
 static int request_header_(CONTAINER_REQUEST *me, const char *name, const char *value, int replace);
 static int request_write_(CONTAINER_REQUEST *me, const char *buf, size_t buflen);
-static int request_puts_(CONTAINER_REQUEST *me, const char *str);
+static int request_write_header_(void *data, const char *name, const char *value, int more);
 static int request_close_(CONTAINER_REQUEST *me);
 
 static struct container_request_api_struct request_api_ =
@@ -22,13 +22,15 @@ static struct container_request_api_struct request_api_ =
 	request_addref_,
 	request_release_,
 	request_timestamp_,
-	request_protocol_,
-	request_method_,
+	request_status_,
+	cw_request_protocol,
+	cw_request_method,
 	request_uri_str_,
 	request_getenv_,
+	request_environment_,
 	request_header_,
 	request_write_,
-	request_puts_,
+	cw_request_puts,
 	request_close_
 };
 
@@ -36,6 +38,8 @@ CONTAINER_REQUEST *
 request_create_(ENDPOINT *ep)
 {
 	CONTAINER_REQUEST *p;
+	size_t n;
+	const char *t;
 	
 	p = (CONTAINER_REQUEST *) calloc(1, sizeof(CONTAINER_REQUEST));
 	if(!p)
@@ -53,8 +57,10 @@ request_create_(ENDPOINT *ep)
     p->in = ep->request->in;
 	p->out = ep->request->out;
 	p->err = ep->request->err;
-	p->params = ep->request->envp;
 	memcpy(&(p->reqtime), &(ep->reqtime), sizeof(struct timeval));
+	cw_request_env_init(ep->request->envp, &(p->env));
+	cw_request_headers_init(&(p->headers));
+	cw_request_info_init(&(p->info), &(p->env));
 	ep->request = NULL;
 	return p;
 }
@@ -62,13 +68,7 @@ request_create_(ENDPOINT *ep)
 static unsigned long
 request_addref_(CONTAINER_REQUEST *me)
 {
-	unsigned long r;
-	
-	pthread_mutex_lock(&(me->lock));
-	me->refcount++;
-	r = me->refcount;
-	pthread_mutex_unlock(&(me->lock));
-	return r;
+	return cw_addref(&(me->lock), &(me->refcount));
 }
 
 static unsigned long
@@ -76,14 +76,12 @@ request_release_(CONTAINER_REQUEST *me)
 {
 	unsigned long r;
 
-	pthread_mutex_lock(&(me->lock));
-	me->refcount--;
-	r = me->refcount;
-	pthread_mutex_unlock(&(me->lock));
+	r = cw_release(&(me->lock), &(me->refcount));
 	if(!r)
 	{
 		DPRINTF(me->cw, "freeing request %08lx", (unsigned long) me);
 		FCGX_Finish_r(me->request);
+		cw_request_info_destroy(&(me->info));
 		me->cw->api->release(me->cw);
 		me->endpoint->api->release(me->endpoint);
 		pthread_mutex_destroy(&(me->lock));
@@ -99,28 +97,28 @@ request_timestamp_(CONTAINER_REQUEST *me, struct timeval *tv)
 	return 0;
 }
 
-static const char *
-request_protocol_(CONTAINER_REQUEST *me)
+static int 
+request_status_(CONTAINER_REQUEST *me)
 {
-	return FCGX_GetParam("SERVER_PROTOCOL", me->params);
-}
-
-static const char *
-request_method_(CONTAINER_REQUEST *me)
-{
-	return FCGX_GetParam("REQUEST_METHOD", me->params);
+	return cw_request_headers_status(&(me->headers));
 }
 
 static const char *
 request_uri_str_(CONTAINER_REQUEST *me)
 {
-	return FCGX_GetParam("REQUEST_URI", me->params);
+	return request_getenv_(me, "REQUEST_URI");
 }
 
 static const char *
 request_getenv_(CONTAINER_REQUEST *me, const char *name)
 {
-	return FCGX_GetParam(name, me->params);
+	return cw_request_getenv(&(me->env), name);
+}
+
+static int
+request_environment_(CONTAINER_REQUEST *me, jd_var *out)
+{
+	return cw_request_environment(&(me->env), out);
 }
 
 static int
@@ -129,13 +127,10 @@ request_header_(CONTAINER_REQUEST *me, const char *name, const char *value, int 
 	if(me->headers_sent)
 	{
 		/* Headers already sent */
+		errno = EINVAL;
 		return -1;
 	}
-	FCGX_PutS(name, me->out);
-	FCGX_PutChar(':', me->out);
-	FCGX_PutChar(' ', me->out);
-	FCGX_PutS(value, me->out);
-	FCGX_PutChar('\n', me->out);
+	cw_request_headers_set(&(me->headers), name, value, replace);
 	return 0;
 }
 
@@ -144,6 +139,7 @@ request_write_(CONTAINER_REQUEST *me, const char *buf, size_t buflen)
 {
 	if(!me->headers_sent)
 	{
+		cw_request_headers_send(&(me->headers), request_write_header_, me);
 		FCGX_PutChar('\n', me->out);
 		me->headers_sent = 1;
 	}
@@ -151,9 +147,16 @@ request_write_(CONTAINER_REQUEST *me, const char *buf, size_t buflen)
 }
 
 static int
-request_puts_(CONTAINER_REQUEST *me, const char *str)
+request_write_header_(void *data, const char *name, const char *value, int more)
 {
-	return me->api->write(me, str, strlen(str));
+	CONTAINER_REQUEST *me = (CONTAINER_REQUEST *) data;
+	
+	FCGX_PutS(name, me->out);
+	FCGX_PutChar(':', me->out);
+	FCGX_PutChar(' ', me->out);
+	FCGX_PutS(value, me->out);
+	FCGX_PutChar('\n', me->out);
+	return 0;
 }
 
 static int

@@ -59,8 +59,10 @@ struct container_request_struct
 	FCGX_Stream *in;
 	FCGX_Stream *out;
 	FCGX_Stream *err;
-	FCGX_ParamArray params;
+	jd_var env;
+	jd_var headers;
 	int headers_sent;
+	struct cw_request_info_struct info;
 };
 
 int containerware_module_init(CONTAINERWARE *cw);

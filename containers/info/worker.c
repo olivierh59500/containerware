@@ -102,8 +102,9 @@ worker_process_(CONTAINER_WORKER *me)
 static int
 worker_process_request_(CONTAINER_WORKER *me, CONTAINER_REQUEST *req)
 {
-	size_t c;
+	size_t c, n;
 	const char *t;
+	jd_var env = JD_INIT, keys = JD_INIT, *k, *v;
 	
 	(void) me;
 	
@@ -324,7 +325,31 @@ worker_process_request_(CONTAINER_WORKER *me, CONTAINER_REQUEST *req)
 	req->api->puts(req, "</table>\n");	
 	req->api->puts(req, "</section>\n");
 
+	req->api->environment(req, &env);
+	jd_keys(&keys, &env);
+	c = jd_count(&keys);
 	req->api->puts(req, "<section id='env'>\n");
+	req->api->puts(req, "<h2>Request Environment</h2>\n");
+	req->api->puts(req, "<table>\n");
+	req->api->puts(req, "<tbody>\n");
+	WDPRINTF(me->host, "%lJ", &env);
+/*	WDPRINTF(me->host, "%s", jd_bytes(jd_printf(jd_nv(), "%lJ", &env), NULL)); */
+	for(n = 0; n < c; n++)
+	{
+		k = jd_get_idx(&keys, n);
+		v = jd_get_key(&env, k, 0);
+		if(v)
+		{
+			info_putstr_(req, jd_bytes(k, NULL), jd_bytes(v, NULL));
+		}
+	}
+	req->api->puts(req, "</tbody>\n");
+	req->api->puts(req, "</table>\n");	
+	req->api->puts(req, "</section>\n");
+	jd_release(&keys);
+	jd_release(&env);
+
+	req->api->puts(req, "<section id='cw-env'>\n");
 	req->api->puts(req, "<h2>Environment</h2>\n");
 	req->api->puts(req, "<table>\n");	
 	req->api->puts(req, "<tbody>\n");

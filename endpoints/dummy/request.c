@@ -7,6 +7,7 @@
 static unsigned long request_addref_(CONTAINER_REQUEST *me);
 static unsigned long request_release_(CONTAINER_REQUEST *me);
 static int request_timestamp_(CONTAINER_REQUEST *me, struct timeval *tv);
+static int request_status_(CONTAINER_REQUEST *me);
 static const char *request_protocol_(CONTAINER_REQUEST *me);
 static const char *request_method_(CONTAINER_REQUEST *me);
 static const char *request_uri_str_(CONTAINER_REQUEST *me);
@@ -22,10 +23,12 @@ static struct container_request_api_struct request_api_ =
 	request_addref_,
 	request_release_,
 	request_timestamp_,
+	request_status_,
 	request_protocol_,
 	request_method_,
 	request_uri_str_,
 	request_getenv_,
+	NULL,
 	request_header_,
 	request_write_,
 	request_puts_,
@@ -87,6 +90,13 @@ request_timestamp_(CONTAINER_REQUEST *me, struct timeval *tv)
 {
 	memcpy(tv, &(me->reqtime), sizeof(struct timeval));
 	return 0;
+}
+
+static int 
+request_status_(CONTAINER_REQUEST *me)
+{
+	(void) me;
+	return 200;
 }
 
 static const char *

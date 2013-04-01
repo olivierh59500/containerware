@@ -79,13 +79,7 @@ endpoint_create_(ENDPOINT_SERVER *server, URI *uri)
 static unsigned long
 endpoint_addref_(ENDPOINT *me)
 {
-	unsigned long r;
-	
-	pthread_mutex_lock(&(me->lock));
-	me->refcount++;
-	r = me->refcount;
-	pthread_mutex_unlock(&(me->lock));
-	return r;
+	return cw_addref(&(me->lock), &(me->refcount));
 }
 
 static unsigned long
@@ -93,10 +87,7 @@ endpoint_release_(ENDPOINT *me)
 {
 	unsigned long r;
 
-	pthread_mutex_lock(&(me->lock));
-	me->refcount--;
-	r = me->refcount;
-	pthread_mutex_unlock(&(me->lock));
+	r = cw_release(&(me->lock), &(me->refcount));
 	if(!r)
 	{
 		me->cw->api->release(me->cw);

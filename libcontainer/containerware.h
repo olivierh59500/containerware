@@ -7,6 +7,7 @@
 # include <sys/time.h>
 
 # include "liburi.h"
+# include "jsondata.h"
 
 # if (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L) && !defined(restrict)
 #  define restrict
@@ -211,12 +212,24 @@ struct container_request_api_struct
 
 	/* High-level introspection methods */
 	int (*timestamp)(CONTAINER_REQUEST *me, struct timeval *tv);
+	int (*status)(CONTAINER_REQUEST *me);
 	const char *(*protocol)(CONTAINER_REQUEST *me);
 	const char *(*method)(CONTAINER_REQUEST *me);
 	const char *(*request_uri_str)(CONTAINER_REQUEST *me);
 	
+	/* Path information */
+	/*
+	request URI:        uri()       [the request URI as a URI]
+	request URI string: uri_str()   [request URI as a string]
+	request URI string: uri_vstr()  [request URI string as a jd_var]
+	request array:      array()     [path components relative to app root]
+	request base:       base()      [always has a trailing slash]
+	request resource:   resource()  [no trailing slash; 'index' is added if at root]
+    */	
+	
 	/* Low-level introspection methods */
 	const char *(*getenv)(CONTAINER_REQUEST *me, const char *name);
+	int (*environment)(CONTAINER_REQUEST *me, jd_var *out);
 	
 	/* I/O */
 	int (*header)(CONTAINER_REQUEST *me, const char *name, const char *value, int replace);
@@ -246,6 +259,35 @@ struct container_worker_host_api_struct
 /* Logging macros */
 # define WDPRINTF(host, ...) (host)->api->lprintf(host, CWLOG_DEBUG, __VA_ARGS__)
 # define WLPRINTF(host, severity, ...) (host)->api->lprintf(host, severity, __VA_ARGS__)
+
+/* *** APIs for module implementors *** */
+
+/* Reference counting */
+unsigned long cw_addref(pthread_mutex_t *lock, unsigned long *refcount);
+unsigned long cw_release(pthread_mutex_t *lock, unsigned long *refcount);
+
+/* Utilities for endpoint implementors */
+struct cw_request_info_struct
+{
+	URI *request_uri;
+	jd_var request_vstr;
+	const char *request_str;
+	jd_var request_array;
+};
+
+int cw_request_puts(CONTAINER_REQUEST *me, const char *str);
+const char *cw_request_protocol(CONTAINER_REQUEST *me);
+const char *cw_request_method(CONTAINER_REQUEST *me);
+int cw_request_environment(jd_var *env, jd_var *out);
+const char *cw_request_getenv(jd_var *env, const char *name);
+int cw_request_env_init(char *const *env, jd_var *out);
+int cw_request_headers_init(jd_var *out);
+int cw_request_headers_set(jd_var *headers, const char *name, const char *value, int replace);
+int cw_request_headers_vset(jd_var *headers, jd_var *name, jd_var *value, int replace);
+int cw_request_headers_status(jd_var *headers);
+int cw_request_headers_send(jd_var *headers, int (*callback)(void *data, const char *name, const char *value, int more), void *data);
+int cw_request_info_init(struct cw_request_info_struct *info, jd_var *env);
+int cw_request_info_destroy(struct cw_request_info_struct *info);
 
 # if defined(__cplusplus)
 }

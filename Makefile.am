@@ -1,6 +1,6 @@
-DIST_SUBDIRS = m4 liburi endpoints containers
+DIST_SUBDIRS = m4 liburi jsondata libcontainer libship endpoints containers
 
-SUBDIRS = @subdirs@ endpoints containers .
+SUBDIRS = @subdirs@ libcontainer . libship endpoints containers
 
 ACLOCAL_AMFLAGS = -I m4
 
@@ -14,11 +14,12 @@ containerware_SOURCES = p_containerware.h ptrlist-impl.h \
 	container-list.c listener-list.c server-list.c \
 	worker-list.c host-list.c
 
+containerware_CPPFLAGS = @LIBCONTAINER_CPPFLAGS@
+
 containerware_LDADD = libiniparser.la \
-	@LIBURI_LDFLAGS@ @LIBURI_LOCAL_LIBS@ @LIBURI_LIBS@ \
-	@LIBJSONDATA_LDFLAGS@ @LIBJSONDATA_LOCAL_LIBS@ @LIBJSONDATA_LIBS@
-	
-containerware_CPPFLAGS = @LIBURI_CPPFLAGS@ @LIBJSONDATA_CPPFLAGS@
+	@LIBCONTAINER_LOCAL_LIBS@ @LIBCONTAINER_LIBS@
+
+containerware_LDFLAGS = @LIBCONTAINER_LDFLAGS@
 
 libiniparser_la_SOURCES = \
 	iniparser/src/dictionary.h \

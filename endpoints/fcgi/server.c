@@ -56,13 +56,7 @@ server_create_(CONTAINERWARE *cw)
 static unsigned long
 server_addref_(ENDPOINT_SERVER *me)
 {
-	unsigned long r;
-	
-	pthread_mutex_lock(&(me->lock));
-	me->refcount++;
-	r = me->refcount;
-	pthread_mutex_unlock(&(me->lock));
-	return r;
+	return cw_addref(&(me->lock), &(me->refcount));
 }
 
 static unsigned long
@@ -70,10 +64,7 @@ server_release_(ENDPOINT_SERVER *me)
 {
 	unsigned long r;
 
-	pthread_mutex_lock(&(me->lock));
-	me->refcount--;
-	r = me->refcount;
-	pthread_mutex_unlock(&(me->lock));
+	r = cw_release(&(me->lock), &(me->refcount));
 	if(!r)
 	{
 		me->cw->api->release(me->cw);

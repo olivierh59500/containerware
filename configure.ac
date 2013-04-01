@@ -24,6 +24,7 @@ AM_MAINTAINER_MODE
 AC_CONFIG_HEADER([config.h])
 
 AC_PROG_CC
+AC_PROG_CC_C99
 
 LT_INIT
 
@@ -71,8 +72,32 @@ AC_SUBST([buildroot])
 
 BT_DEFINE_PREFIX
 
+dnl Flags for building modules inside the tree
+
+LIBCONTAINER_CPPFLAGS="-I\${top_srcdir}/libcontainer -I\${top_builddir}/libcontainer $LIBURI_CPPFLAGS $LIBJSONDATA_CPPFLAGS"
+LIBCONTAINER_LDFLAGS=""
+LIBCONTAINER_LIBS=""
+LIBCONTAINER_LOCAL_LIBS="\${top_builddir}/libcontainer/libcontainer.la"
+
+AC_SUBST([LIBCONTAINER_CPPFLAGS])
+AC_SUBST([LIBCONTAINER_LDFLAGS])
+AC_SUBST([LIBCONTAINER_LIBS])
+AC_SUBST([LIBCONTAINER_LOCAL_LIBS])
+
+LIBSHIP_CPPFLAGS="-I\${top_srcdir}/libship -I\${top_builddir}/libship $LIBSHIP_CPPFLAGS"
+LIBSHIP_LDFLAGS=""
+LIBSHIP_LIBS=""
+LIBSHIP_LOCAL_LIBS="\${top_builddir}/ship/libship.la"
+
+AC_SUBST([LIBSHIP_CPPFLAGS])
+AC_SUBST([LIBSHIP_LDFLAGS])
+AC_SUBST([LIBSHIP_LIBS])
+AC_SUBST([LIBSHIP_LOCAL_LIBS])
+
 AC_CONFIG_FILES([
 Makefile
+libcontainer/Makefile
+libship/Makefile
 endpoints/Makefile
 endpoints/dummy/Makefile
 endpoints/fcgi/Makefile
