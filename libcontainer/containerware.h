@@ -277,7 +277,8 @@ struct cw_request_info_struct
 	jd_var request_vstr;
 	const char *request_str;
 	jd_var request_array;
-	
+	jd_var consumed;
+	jd_var peeked;
 	jd_var params_array;
 	
 	jd_var current_array;
@@ -296,8 +297,10 @@ int cw_request_headers_status(jd_var *headers);
 int cw_request_headers_send(jd_var *headers, int (*callback)(void *data, const char *name, const char *value, int more), void *data);
 int cw_request_info_init(struct cw_request_info_struct *info, jd_var *env);
 int cw_request_info_destroy(struct cw_request_info_struct *info);
+const char *cw_request_info_peek(struct cw_request_info_struct *info);
+int cw_request_info_vpeek(struct cw_request_info_struct *info, jd_var *out);
 const char *cw_request_info_consume(struct cw_request_info_struct *info);
-jd_var *cw_request_info_vconsume(struct cw_request_info_struct *info);
+int cw_request_info_vconsume(struct cw_request_info_struct *info, jd_var *out);
 
 # if defined(__cplusplus)
 }

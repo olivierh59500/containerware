@@ -349,36 +349,74 @@ cw_request_info_init(struct cw_request_info_struct *info, jd_var *env)
 	return 0;
 }
 
+/* The pointer returned by this function is valid until another call
+ * (on any thread) or until cw_request_info_destroy() is called.
+ */
 const char *
 cw_request_info_consume(struct cw_request_info_struct *info)
 {
-	jd_var *slot;
+	int r;
 	
-	slot = cw_request_info_vconsume(info);
-	if(!slot)
+	r = cw_request_info_vconsume(info, &(info->consumed));
+	if(r == -1 || info->consumed.type == VOID)
 	{
 		return NULL;
 	}
-	return jd_bytes(slot, NULL);
+	return jd_bytes(&(info->consumed), NULL);
 }
 
-jd_var *
-cw_request_info_vconsume(struct cw_request_info_struct *info)
+/* The pointer returned by this function is valid until another call
+ * (on any thread) or until cw_request_info_destroy() is called.
+ */
+const char *
+cw_request_info_peek(struct cw_request_info_struct *info)
+{
+	int r;
+	
+	r = cw_request_info_vpeek(info, &(info->peeked));
+	if(r == -1 || info->consumed.type == VOID)
+	{
+		return NULL;
+	}
+	return jd_bytes(&(info->peeked), NULL);
+}
+
+int
+cw_request_info_vconsume(struct cw_request_info_struct *info, jd_var *out)
 {
 	size_t c;
 	jd_var entry = JD_INIT;
 	jd_var *slot;
 	
+	memset(out, 0, sizeof(jd_var));
 	if(!jd_count(&(info->params_array)))
 	{
-		return NULL;
+		return 0;
 	}
 	jd_shift(&(info->params_array), 1, &entry);
 	slot = jd_push(&(info->current_array), 1);
 	jd_assign(slot, &entry);
 	jd_release(&entry);
+	jd_assign(out, slot);
 	/* cw_request_info_update_(info); */
-	return slot;
+	return 0;
+}
+
+
+int
+cw_request_info_vpeek(struct cw_request_info_struct *info, jd_var *out)
+{
+	size_t c;
+	jd_var *slot;
+	
+	memset(out, 0, sizeof(jd_var));
+	if(!jd_count(&(info->params_array)))
+	{
+		return 0;
+	}
+	slot = jd_get_idx(&(info->params_array), 0);
+	jd_assign(out, slot);
+	return 0;
 }
 
 int
@@ -386,9 +424,10 @@ cw_request_info_destroy(struct cw_request_info_struct *info)
 {
 	jd_release(&(info->request_vstr));
 	jd_release(&(info->request_array));
+	jd_release(&(info->consumed));
+	jd_release(&(info->peeked));
 	jd_release(&(info->params_array));
 	jd_release(&(info->current_array));
-	
 	uri_destroy(info->request_uri);
 	return 0;
 }
