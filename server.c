@@ -12,6 +12,7 @@ int
 server_init(void)
 {
 	server_list_init(&servers, 0);
+	return 0;
 }
 
 /* Register a new listener
@@ -53,6 +54,7 @@ server_register(const char *scheme, ENDPOINT_SERVER *server)
 		server->api->release(server);
 		return -1;
 	}
+	LPRINTF(CWLOG_INFO, "endpoint scheme '%s' registered", p->scheme);
 	return 0;
 }
 
