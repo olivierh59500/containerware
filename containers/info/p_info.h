@@ -44,7 +44,7 @@ struct container_worker_struct
 int containerware_module_init(CONTAINERWARE *cw);
 CONTAINER_WORKER *worker_create_(CONTAINER *container, CONTAINER_WORKER_HOST *host, const CONTAINER_WORKER_INFO *info);
 
-int worker_prcoess_info(CONTAINER_WORKER *me, CONTAINER_REQUEST *req);
+int worker_process_info(CONTAINER_WORKER *me, CONTAINER_REQUEST *req);
 int worker_process_global_css(CONTAINER_WORKER *me, CONTAINER_REQUEST *req);
 
 #endif /*!P_INFO_H_*/
