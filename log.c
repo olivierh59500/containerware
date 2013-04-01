@@ -95,7 +95,10 @@ log_vxprintf_(const char *facility, CONTAINER_WORKER_HOST *host, int severity, c
 		{
 			fprintf(stderr, "%s: ", facility);
 		}
-		vfprintf(stderr, fmt, ap);
+		JD_SCOPE
+		{
+			fputs(jd_bytes(jd_vprintf(jd_nv(), fmt, ap), NULL), stderr);
+		}
 		fputc('\n', stderr);
 		fflush(stderr);
 		pthread_mutex_unlock(&log_lock);	
